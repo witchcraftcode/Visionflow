@@ -1,0 +1,5 @@
+{
+  "input_size": [224, 224],
+  "color_mode": "RGB",
+  "normalization": { "type": "scale", "value": 255.0 }
+}

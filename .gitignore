@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+dump.rdb
+tempCodeRunnerFile.py
+app/tempCodeRunnerFile.py
+from
+import
+app.models.onnx_model
+ONNXVisionModel
+app/models/onnx/*.pt
