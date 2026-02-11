@@ -55,6 +55,7 @@ def test_predict_and_status(monkeypatch):
     status_body = status_resp.json()
     assert status_body["status"] == "queued"
     assert status_body["model"] == "resnet18"
+    assert "image_bytes" not in status_body
 
 
 def test_status_missing_job(monkeypatch):

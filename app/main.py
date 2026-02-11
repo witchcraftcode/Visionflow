@@ -53,4 +53,5 @@ def get_status(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    return job
+    # Do not expose raw input payloads in API responses.
+    return {k: v for k, v in job.items() if k != "image_bytes"}
