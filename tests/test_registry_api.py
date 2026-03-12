@@ -1,6 +1,14 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app import main as api
+
+
+@pytest.fixture(autouse=True)
+def bypass_security(monkeypatch):
+    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(api, "verify_admin_key", lambda provided: True)
 
 
 def test_model_versions_unknown():

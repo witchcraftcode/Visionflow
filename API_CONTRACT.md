@@ -106,3 +106,4 @@ Status values:
 
 ## Authentication
 - If `VISIONFLOW_API_KEY` is set, all endpoints except `/health`, `/ready`, `/metrics` require `X-API-Key`.
+- If `VISIONFLOW_ADMIN_API_KEY` is set, `POST /models/register` and `POST /models/{model_name}/promote` also require `X-Admin-Key`.

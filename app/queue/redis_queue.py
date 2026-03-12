@@ -6,6 +6,7 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 JOB_TTL_SECONDS = int(os.getenv("JOB_TTL_SECONDS", 86400))
 IDEMPOTENCY_TTL_SECONDS = int(os.getenv("IDEMPOTENCY_TTL_SECONDS", 3600))
+RATE_LIMIT_PREFIX = "ratelimit"
 
 redis_client = redis.Redis(
     host=REDIS_HOST,
@@ -63,3 +64,12 @@ def dead_letter_depth() -> int:
 
 def ping() -> bool:
     return bool(redis_client.ping())
+
+
+def consume_rate_limit(client_id: str, limit: int, window_seconds: int) -> bool:
+    window_start = int(redis_client.time()[0] // window_seconds) * window_seconds
+    key = f"{RATE_LIMIT_PREFIX}:{client_id}:{window_start}"
+    current = redis_client.incr(key)
+    if current == 1:
+        redis_client.expire(key, window_seconds)
+    return int(current) <= limit

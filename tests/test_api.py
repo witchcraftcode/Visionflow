@@ -1,6 +1,14 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app import main as api
+
+
+@pytest.fixture(autouse=True)
+def bypass_security(monkeypatch):
+    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(api, "verify_admin_key", lambda provided: True)
 
 
 def test_health():
@@ -174,6 +182,38 @@ def test_rate_limit_rejection(monkeypatch):
     resp = client.get("/models")
     assert resp.status_code == 429
     assert resp.json()["error"]["code"] == "rate_limited"
+
+
+def test_admin_rejection_for_register(monkeypatch):
+    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(api, "verify_admin_key", lambda provided: False)
+    client = TestClient(api.app)
+    resp = client.post(
+        "/models/register",
+        json={
+            "model": "custom",
+            "version": "1.0.0",
+            "runtime": "onnx",
+            "artifact_uri": "app/models/onnx/custom.onnx",
+            "class_path": "app.models.onnx_model.ONNXVisionModel",
+            "input_schema": {"type": "image"},
+            "output_schema": {"type": "classification"},
+            "resources": {"cpu": "500m", "memory": "512Mi"},
+        },
+    )
+    assert resp.status_code == 403
+    assert resp.json()["error"]["code"] == "forbidden"
+
+
+def test_admin_rejection_for_promote(monkeypatch):
+    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(api, "verify_admin_key", lambda provided: False)
+    client = TestClient(api.app)
+    resp = client.post("/models/resnet18/promote", json={"version": "1.0.0"})
+    assert resp.status_code == 403
+    assert resp.json()["error"]["code"] == "forbidden"
 
 
 def test_drift_monitor_endpoints():

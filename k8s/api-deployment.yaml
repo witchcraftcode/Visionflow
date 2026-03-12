@@ -64,3 +64,8 @@ spec:
                 secretKeyRef:
                   name: visionflow-secrets
                   key: api_key
+            - name: VISIONFLOW_ADMIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: visionflow-secrets
+                  key: admin_api_key

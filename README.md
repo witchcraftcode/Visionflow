@@ -91,6 +91,7 @@ Adjust `input_size`, `color_mode`, and `normalization` to match each model.
 - `JOB_TTL_SECONDS` (default `86400`)
 - `IDEMPOTENCY_TTL_SECONDS` (default `3600`)
 - `VISIONFLOW_API_KEY` (optional; if set, API requires `X-API-Key`)
+- `VISIONFLOW_ADMIN_API_KEY` (optional; if set, admin endpoints require `X-Admin-Key`)
 - `RATE_LIMIT_REQUESTS` (default `60`)
 - `RATE_LIMIT_WINDOW_SECONDS` (default `60`)
 

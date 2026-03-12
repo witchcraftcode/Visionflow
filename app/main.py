@@ -37,11 +37,13 @@ from app.observability import (
     track_job_status,
 )
 from app.security import allow_request, verify_api_key
+from app.security import verify_admin_key
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 5 * 1024 * 1024))
 DEFAULT_JOB_TIMEOUT_SECONDS = int(os.getenv("DEFAULT_JOB_TIMEOUT_SECONDS", 60))
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 EXEMPT_PATHS = {"/health", "/ready", "/metrics"}
+ADMIN_PATHS = {"/models/register"}
 
 app = FastAPI(title="VisionFlow")
 DRIFT_MONITOR = DriftMonitor()
@@ -125,6 +127,24 @@ async def request_middleware(request: Request, call_next):
             response.headers["X-Trace-Id"] = request.state.trace_id
             track_http_metrics(request.method, request.url.path, 429, start_time)
             return response
+
+        if request.url.path in ADMIN_PATHS or (
+            request.url.path.startswith("/models/") and request.url.path.endswith("/promote")
+        ):
+            admin_key = request.headers.get("X-Admin-Key")
+            if not verify_admin_key(admin_key):
+                response = JSONResponse(
+                    status_code=403,
+                    content=error_payload(
+                        code="forbidden",
+                        message="Missing or invalid admin API key",
+                        details={"header": "X-Admin-Key"},
+                        trace_id=request.state.trace_id,
+                    ),
+                )
+                response.headers["X-Trace-Id"] = request.state.trace_id
+                track_http_metrics(request.method, request.url.path, 403, start_time)
+                return response
 
     response = await call_next(request)
     response.headers["X-Trace-Id"] = request.state.trace_id
