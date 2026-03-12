@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: visionflow-prod
 resources:
   - ../../base
-  - ../../secret.example.yaml
+  - secret.yaml
 commonLabels:
   environment: prod
 replicas:
