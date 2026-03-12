@@ -72,5 +72,31 @@ Adjust `input_size`, `color_mode`, and `normalization` to match each model.
 
 ## API
 - `GET /models`
+- `GET /models/{model_name}/versions`
+- `POST /models/register`
+- `POST /models/{model_name}/promote`
 - `POST /predict` (multipart form: `model`, `file`)
 - `GET /status/{job_id}`
+- `POST /jobs/{job_id}/cancel`
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`
+- `POST /monitoring/drift/baseline`
+- `POST /monitoring/drift/observe`
+- `GET /monitoring/drift/summary`
+
+## Environment Variables
+- `MAX_UPLOAD_BYTES` (default `5242880`)
+- `DEFAULT_JOB_TIMEOUT_SECONDS` (default `60`)
+- `JOB_TTL_SECONDS` (default `86400`)
+- `IDEMPOTENCY_TTL_SECONDS` (default `3600`)
+- `VISIONFLOW_API_KEY` (optional; if set, API requires `X-API-Key`)
+- `RATE_LIMIT_REQUESTS` (default `60`)
+- `RATE_LIMIT_WINDOW_SECONDS` (default `60`)
+
+## Quick Git Sync
+Use helper script to commit and push local changes:
+
+```bash
+/Users/ashimaverma/visionflow/scripts/sync_to_github.sh "your commit message"
+```

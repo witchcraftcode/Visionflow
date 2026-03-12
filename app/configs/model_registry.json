@@ -1,0 +1,90 @@
+{
+  "models": {
+    "resnet18": {
+      "default_version": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "runtime": "onnx",
+          "artifact_uri": "app/models/onnx/resnet18.onnx",
+          "class": "app.models.resnet18.ResNet18Model",
+          "input_schema": {
+            "type": "image",
+            "mime_types": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "output_schema": {
+            "type": "classification",
+            "fields": [
+              "label",
+              "confidence"
+            ]
+          },
+          "resources": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          }
+        }
+      }
+    },
+    "mobilenet": {
+      "default_version": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "runtime": "onnx",
+          "artifact_uri": "app/models/onnx/mobilenet_v2.onnx",
+          "class": "app.models.mobilenet.MobileNetV2Model",
+          "input_schema": {
+            "type": "image",
+            "mime_types": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "output_schema": {
+            "type": "classification",
+            "fields": [
+              "label",
+              "confidence"
+            ]
+          },
+          "resources": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          }
+        }
+      }
+    },
+    "yolov5": {
+      "default_version": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "runtime": "onnx",
+          "artifact_uri": "app/models/onnx/yolov5n.onnx",
+          "class": "app.models.yolov5.YOLOv5Model",
+          "input_schema": {
+            "type": "image",
+            "mime_types": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "output_schema": {
+            "type": "detection",
+            "fields": [
+              "detections"
+            ]
+          },
+          "resources": {
+            "cpu": "1000m",
+            "memory": "1Gi"
+          }
+        }
+      }
+    }
+  }
+}

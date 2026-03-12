@@ -4,6 +4,11 @@ metadata:
   name: visionflow-api
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: visionflow-api
@@ -12,10 +17,19 @@ spec:
       labels:
         app: visionflow-api
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
           image: visionflow-api
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8000
           resources:
@@ -37,10 +51,16 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 20
+          envFrom:
+            - configMapRef:
+                name: visionflow-config
           env:
             - name: REDIS_HOST
               value: "redis"
             - name: REDIS_PORT
               value: "6379"
-            - name: JOB_TTL_SECONDS
-              value: "86400"
+            - name: VISIONFLOW_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: visionflow-secrets
+                  key: api_key

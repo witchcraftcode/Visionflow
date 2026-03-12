@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: visionflow-staging
+resources:
+  - ../../base
+  - ../../secret.example.yaml
+commonLabels:
+  environment: staging
+replicas:
+  - name: visionflow-api
+    count: 1
+  - name: visionflow-worker
+    count: 1

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visionflow-dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visionflow-staging
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visionflow-prod
