@@ -11,3 +11,4 @@ resources:
   - hpa-worker.yaml
   - pdb-api.yaml
   - network-policy.yaml
+  - ingress-network-policy.yaml

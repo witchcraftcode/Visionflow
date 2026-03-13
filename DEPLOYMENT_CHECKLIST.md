@@ -35,10 +35,28 @@
 4. Verify:
    ```bash
    kubectl -n visionflow-staging get pods
-   kubectl -n visionflow-staging get svc
-   kubectl -n visionflow-staging port-forward svc/visionflow-api 8000:8000
+   kubectl -n visionflow-staging get ingress
    ```
-5. Re-run local API checks against the forwarded port.
+5. Enable ingress and map hostname locally:
+   ```bash
+   minikube addons enable ingress
+   echo "$(minikube ip) visionflow-staging.local" | sudo tee -a /etc/hosts
+   ```
+6. Verify:
+   ```bash
+   curl -s -H "Host: visionflow-staging.local" http://$(minikube ip)/health
+   curl -s -H "Host: visionflow-staging.local" http://$(minikube ip)/ready
+   ```
+
+## Public Production
+1. Push `visionflow-api` and `visionflow-worker` to a registry.
+2. Update `/Users/ashimaverma/visionflow/k8s/overlays/prod/ingress.yaml` with your real domain.
+3. Create the TLS secret named `visionflow-tls`.
+4. Deploy:
+   ```bash
+   kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/prod
+   ```
+5. Point DNS to the ingress/load balancer.
 
 ## GitHub
 1. Commit:

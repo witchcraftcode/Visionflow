@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: visionflow-prod
 resources:
   - ../../base
-  - secret.yaml
+  - ingress.yaml
 commonLabels:
   environment: prod
 replicas:
@@ -11,3 +11,10 @@ replicas:
     count: 3
   - name: visionflow-worker
     count: 2
+images:
+  - name: visionflow-api
+    newName: ghcr.io/witchcraftcode/visionflow-api
+    newTag: latest
+  - name: visionflow-worker
+    newName: ghcr.io/witchcraftcode/visionflow-worker
+    newTag: latest

@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: visionflow-api
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - visionflow.example.com
+      secretName: visionflow-tls
+  rules:
+    - host: visionflow.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: visionflow-api
+                port:
+                  number: 8000

@@ -4,6 +4,7 @@ namespace: visionflow-staging
 resources:
   - ../../base
   - secret.yaml
+  - ingress.yaml
 commonLabels:
   environment: staging
 replicas:

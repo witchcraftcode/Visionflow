@@ -48,19 +48,38 @@ docker build -t visionflow-api -f /Users/ashimaverma/visionflow/Dockerfile.api /
 docker build -t visionflow-worker -f /Users/ashimaverma/visionflow/Dockerfile.worker /Users/ashimaverma/visionflow
 ```
 
-2. Apply manifests:
+2. For Minikube, load the images:
 
 ```bash
-kubectl apply -f /Users/ashimaverma/visionflow/k8s
+minikube image load visionflow-api
+minikube image load visionflow-worker
 ```
 
-3. Port-forward the API:
+3. Apply manifests:
 
 ```bash
-kubectl port-forward svc/visionflow-api 8000:8000
+kubectl apply -f /Users/ashimaverma/visionflow/k8s/namespaces.yaml
+kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/staging
 ```
 
-4. Use the same curl commands as above against http://localhost:8000.
+4. Expose staging through Minikube ingress:
+
+```bash
+minikube addons enable ingress
+echo "$(minikube ip) visionflow-staging.local" | sudo tee -a /etc/hosts
+curl -H "Host: visionflow-staging.local" http://$(minikube ip)/health
+```
+
+5. Use the same curl commands as above against `http://$(minikube ip)` and pass the ingress host:
+
+```bash
+curl -s -H "Host: visionflow-staging.local" http://$(minikube ip)/models | jq
+```
+
+For real public access, deploy the production overlay to a cloud Kubernetes cluster, push your images to a registry, and point a real DNS name at the ingress/load balancer. The production ingress template lives at `/Users/ashimaverma/visionflow/k8s/overlays/prod/ingress.yaml`.
+
+A complete public deployment guide is in:
+- `/Users/ashimaverma/visionflow/PUBLIC_DEPLOYMENT.md`
 
 ## Config
 Per-model preprocessing configs live in:
