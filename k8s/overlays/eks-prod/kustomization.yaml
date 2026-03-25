@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: visionflow-prod
+resources:
+  - ../../base
+  - ingress.yaml
+commonLabels:
+  environment: prod
+  platform: eks
+replicas:
+  - name: visionflow-api
+    count: 3
+  - name: visionflow-worker
+    count: 2
+images:
+  - name: visionflow-api
+    newName: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/visionflow-api
+    newTag: latest
+  - name: visionflow-worker
+    newName: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/visionflow-worker
+    newTag: latest
+patches:
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: visionflow-allow-ingress-controller
+      $patch: delete
