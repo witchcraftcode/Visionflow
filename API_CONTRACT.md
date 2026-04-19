@@ -95,6 +95,11 @@ Status values:
 ### `POST /jobs/{job_id}/cancel`
 - Marks pending job as cancel requested.
 
+### `GET /admin/audit`
+- Returns recent admin audit events for model-management actions.
+- Query param:
+  - `limit` (optional, default `50`)
+
 ### `POST /monitoring/drift/baseline`
 - Sets baseline statistics for features.
 
@@ -106,4 +111,4 @@ Status values:
 
 ## Authentication
 - If `VISIONFLOW_API_KEY` is set, all endpoints except `/health`, `/ready`, `/metrics` require `X-API-Key`.
-- If `VISIONFLOW_ADMIN_API_KEY` is set, `POST /models/register` and `POST /models/{model_name}/promote` also require `X-Admin-Key`.
+- If `VISIONFLOW_ADMIN_API_KEY` is set, `POST /models/register`, `POST /models/{model_name}/promote`, and `GET /admin/audit` also require `X-Admin-Key`.

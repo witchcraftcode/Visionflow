@@ -25,7 +25,7 @@ aws sts get-caller-identity
 Set variables:
 ```bash
 export AWS_REGION=us-east-1
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export AWS_ACCOUNT_ID=676766460202
 export CLUSTER_NAME=visionflow-prod
 ```
 
@@ -119,10 +119,9 @@ Update:
 - `/Users/ashimaverma/visionflow/k8s/overlays/eks-prod/kustomization.yaml`
 
 Replace:
-- `ACCOUNT_ID`
 - `REGION`
 
-With your real values.
+With your real AWS region. The account ID is already set to `676766460202`.
 
 ## 9. Deploy VisionFlow to EKS
 ```bash

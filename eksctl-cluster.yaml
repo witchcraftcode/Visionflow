@@ -5,12 +5,15 @@ metadata:
   name: visionflow-prod
   region: us-east-1
 
+autoModeConfig:
+  enabled: false
+
 managedNodeGroups:
   - name: visionflow-ng
-    instanceType: t3.medium
-    desiredCapacity: 2
-    minSize: 2
-    maxSize: 4
+    instanceType: t3.small
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 2
     privateNetworking: false
     iam:
       withAddonPolicies:

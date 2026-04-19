@@ -17,6 +17,7 @@ from app.models.registry import (
     register_model_version,
     resolve_model_version,
 )
+from app.audit import list_admin_audit_events, record_admin_audit_event
 from app.monitoring import DriftMonitor
 from app.queue.redis_queue import (
     dead_letter_depth,
@@ -43,7 +44,7 @@ MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 5 * 1024 * 1024))
 DEFAULT_JOB_TIMEOUT_SECONDS = int(os.getenv("DEFAULT_JOB_TIMEOUT_SECONDS", 60))
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 EXEMPT_PATHS = {"/health", "/ready", "/metrics"}
-ADMIN_PATHS = {"/models/register"}
+ADMIN_PATHS = {"/models/register", "/admin/audit"}
 
 app = FastAPI(title="VisionFlow")
 DRIFT_MONITOR = DriftMonitor()
@@ -71,6 +72,10 @@ class DriftBaselineRequest(BaseModel):
 class DriftObserveRequest(BaseModel):
     features: dict[str, float]
     label: str | None = None
+
+
+class AuditEventListResponse(BaseModel):
+    events: list[dict[str, Any]]
 
 
 def now_utc_iso():
@@ -251,41 +256,59 @@ def model_versions(model_name: str):
 
 
 @app.post("/models/register")
-def register_model(request: RegisterModelVersionRequest):
-    if request.runtime != "onnx":
+def register_model(request: Request, payload: RegisterModelVersionRequest):
+    if payload.runtime != "onnx":
         raise HTTPException(
             status_code=400,
-            detail={"runtime": request.runtime, "reason": "Only 'onnx' runtime is currently supported"},
+            detail={"runtime": payload.runtime, "reason": "Only 'onnx' runtime is currently supported"},
         )
-    if "." not in request.class_path:
+    if "." not in payload.class_path:
         raise HTTPException(
             status_code=400,
-            detail={"class_path": request.class_path, "reason": "class_path must be fully qualified"},
+            detail={"class_path": payload.class_path, "reason": "class_path must be fully qualified"},
         )
-    payload = {
-        "runtime": request.runtime,
-        "artifact_uri": request.artifact_uri,
-        "class": request.class_path,
-        "input_schema": request.input_schema,
-        "output_schema": request.output_schema,
-        "resources": request.resources,
+    registry_payload = {
+        "runtime": payload.runtime,
+        "artifact_uri": payload.artifact_uri,
+        "class": payload.class_path,
+        "input_schema": payload.input_schema,
+        "output_schema": payload.output_schema,
+        "resources": payload.resources,
     }
     try:
-        register_model_version(request.model, request.version, payload)
+        register_model_version(payload.model, payload.version, registry_payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"reason": str(exc)})
-    log_event("model_registered", model=request.model, version=request.version, runtime=request.runtime)
-    return {"status": "registered", "model": request.model, "version": request.version}
+    record_admin_audit_event(
+        "model_registered",
+        trace_id=trace_id_from_request(request),
+        model=payload.model,
+        version=payload.version,
+        runtime=payload.runtime,
+    )
+    log_event("model_registered", model=payload.model, version=payload.version, runtime=payload.runtime)
+    return {"status": "registered", "model": payload.model, "version": payload.version}
 
 
 @app.post("/models/{model_name}/promote")
-def promote_model(model_name: str, request: PromoteModelVersionRequest):
+def promote_model(model_name: str, request: Request, payload: PromoteModelVersionRequest):
     try:
-        promote_model_version(model_name, request.version)
+        promote_model_version(model_name, payload.version)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"reason": str(exc)})
-    log_event("model_promoted", model=model_name, version=request.version)
-    return {"status": "promoted", "model": model_name, "default_version": request.version}
+    record_admin_audit_event(
+        "model_promoted",
+        trace_id=trace_id_from_request(request),
+        model=model_name,
+        version=payload.version,
+    )
+    log_event("model_promoted", model=model_name, version=payload.version)
+    return {"status": "promoted", "model": model_name, "default_version": payload.version}
+
+
+@app.get("/admin/audit", response_model=AuditEventListResponse)
+def admin_audit(limit: int = 50):
+    return {"events": list_admin_audit_events(limit=limit)}
 
 
 @app.post("/monitoring/drift/baseline")

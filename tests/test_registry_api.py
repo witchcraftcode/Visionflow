@@ -20,6 +20,7 @@ def test_model_versions_unknown():
 def test_register_and_promote_model(monkeypatch):
     register_calls = []
     promote_calls = []
+    audit_calls = []
 
     def register_model_version(model_name, version, payload):
         register_calls.append((model_name, version, payload))
@@ -29,6 +30,11 @@ def test_register_and_promote_model(monkeypatch):
 
     monkeypatch.setattr(api, "register_model_version", register_model_version)
     monkeypatch.setattr(api, "promote_model_version", promote_model_version)
+    monkeypatch.setattr(
+        api,
+        "record_admin_audit_event",
+        lambda action, **fields: audit_calls.append((action, fields)),
+    )
 
     client = TestClient(api.app)
     register_resp = client.post(
@@ -47,7 +53,9 @@ def test_register_and_promote_model(monkeypatch):
     assert register_resp.status_code == 200
     assert register_calls[0][0] == "custom"
     assert register_calls[0][1] == "1.0.0"
+    assert audit_calls[0][0] == "model_registered"
 
     promote_resp = client.post("/models/custom/promote", json={"version": "1.0.0"})
     assert promote_resp.status_code == 200
     assert promote_calls[0] == ("custom", "1.0.0")
+    assert audit_calls[1][0] == "model_promoted"

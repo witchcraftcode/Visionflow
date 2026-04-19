@@ -8,6 +8,7 @@
 - Optional API key middleware (`X-API-Key`) when `VISIONFLOW_API_KEY` is configured.
 - Optional admin API key middleware (`X-Admin-Key`) for model-management endpoints.
 - Redis-backed request rate limiting across pods.
+- Persisted Redis-backed admin audit trail for model register/promote operations.
 
 ## Required Secrets
 - `VISIONFLOW_API_KEY` (enables API key auth).
@@ -21,4 +22,4 @@
 1. Rotate secrets and move to managed secret store.
 2. Add image vulnerability scan and policy enforcement in CI.
 3. Add RBAC scopes beyond one admin key for control-plane endpoints.
-4. Add audit persistence for admin actions.
+4. Move admin audit events into a managed log pipeline with longer retention.

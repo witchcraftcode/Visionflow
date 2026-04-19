@@ -167,6 +167,18 @@ def test_metrics_endpoint():
     assert "visionflow_http_requests_total" in resp.text
 
 
+def test_admin_audit_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        api,
+        "list_admin_audit_events",
+        lambda limit=50: [{"action": "model_registered", "model": "resnet18", "version": "1.0.0"}],
+    )
+    client = TestClient(api.app)
+    resp = client.get("/admin/audit?limit=5")
+    assert resp.status_code == 200
+    assert resp.json()["events"][0]["action"] == "model_registered"
+
+
 def test_auth_rejection(monkeypatch):
     monkeypatch.setattr(api, "verify_api_key", lambda provided: False)
     client = TestClient(api.app)

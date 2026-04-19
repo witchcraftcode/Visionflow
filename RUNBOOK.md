@@ -3,6 +3,7 @@
 ## Local Bring-Up
 ```bash
 cd /Users/ashimaverma/visionflow
+./scripts/bootstrap.sh
 docker compose up -d --build
 docker compose ps
 ```
@@ -11,6 +12,7 @@ docker compose ps
 ```bash
 curl -s http://localhost:8000/health
 curl -s http://localhost:8000/ready
+./scripts/smoke_test.sh
 ```
 
 ## Common Incidents
@@ -29,6 +31,11 @@ curl -s http://localhost:8000/ready
 1. Check worker logs for repeated `runtime_error`.
 2. Validate model config and model artifact compatibility.
 3. Reduce retry count or fix model/runtime mismatch.
+
+### Admin changes need audit verification
+1. Read recent entries from `GET /admin/audit`.
+2. Confirm register/promote actions include the expected model, version, and trace ID.
+3. If audit history is unexpectedly short, raise `AUDIT_LOG_LIMIT`.
 
 ## Kubernetes Bring-Up
 ```bash

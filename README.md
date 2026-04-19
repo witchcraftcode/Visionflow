@@ -4,10 +4,21 @@ VisionFlow is a simple ML model deployment service: upload an image, pick a mode
 
 ## Requirements
 - Docker and Docker Compose
+- Python 3.12 recommended for local development
 - ONNX model files placed at:
   - /Users/ashimaverma/visionflow/app/models/onnx/resnet18.onnx
   - /Users/ashimaverma/visionflow/app/models/onnx/mobilenet_v2.onnx
   - /Users/ashimaverma/visionflow/app/models/onnx/yolov5n.onnx
+
+## Local Python Bootstrap
+Prepare a consistent local environment with:
+
+```bash
+cd /Users/ashimaverma/visionflow
+./scripts/bootstrap.sh
+source /Users/ashimaverma/visionflow/.venv/bin/activate
+python -m pytest -q
+```
 
 ## Local (Docker Compose)
 1. Build and start services:
@@ -38,6 +49,19 @@ curl -s -X POST \
 JOB_ID=$(curl -s -X POST -F model=resnet18 -F file=@/Users/ashimaverma/visionflow/test.jpg http://localhost:8000/predict | jq -r .job_id)
 
 curl -s http://localhost:8000/status/$JOB_ID | jq
+```
+
+5. Run the live smoke test:
+
+```bash
+./scripts/smoke_test.sh
+```
+
+6. Verify bundled ONNX artifacts load and produce predictions:
+
+```bash
+source /Users/ashimaverma/visionflow/.venv/bin/activate
+python /Users/ashimaverma/visionflow/scripts/verify_models.py
 ```
 
 ## Kubernetes
@@ -94,6 +118,7 @@ Adjust `input_size`, `color_mode`, and `normalization` to match each model.
 - `GET /models/{model_name}/versions`
 - `POST /models/register`
 - `POST /models/{model_name}/promote`
+- `GET /admin/audit`
 - `POST /predict` (multipart form: `model`, `file`)
 - `GET /status/{job_id}`
 - `POST /jobs/{job_id}/cancel`
@@ -113,6 +138,7 @@ Adjust `input_size`, `color_mode`, and `normalization` to match each model.
 - `VISIONFLOW_ADMIN_API_KEY` (optional; if set, admin endpoints require `X-Admin-Key`)
 - `RATE_LIMIT_REQUESTS` (default `60`)
 - `RATE_LIMIT_WINDOW_SECONDS` (default `60`)
+- `AUDIT_LOG_LIMIT` (default `200`)
 
 ## Quick Git Sync
 Use helper script to commit and push local changes:

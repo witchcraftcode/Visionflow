@@ -14,10 +14,10 @@ replicas:
     count: 2
 images:
   - name: visionflow-api
-    newName: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/visionflow-api
+    newName: 676766460202.dkr.ecr.us-east-1.amazonaws.com/visionflow-api
     newTag: latest
   - name: visionflow-worker
-    newName: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/visionflow-worker
+    newName: 676766460202.dkr.ecr.us-east-1.amazonaws.com/visionflow-worker
     newTag: latest
 patches:
   - patch: |-
