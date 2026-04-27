@@ -61,18 +61,68 @@
    ```
 
 ## Public Production
-1. Push `visionflow-api` and `visionflow-worker` to a registry.
-2. Create production secrets for `VISIONFLOW_API_KEY` and `VISIONFLOW_ADMIN_API_KEY`.
-3. Update `/Users/ashimaverma/visionflow/k8s/overlays/prod/ingress.yaml` with your real domain.
-4. Create the TLS secret named `visionflow-tls`.
-5. Deploy:
+1. Build registry-ready images.
    ```bash
-   kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/prod
+   ./scripts/publish_images.sh --registry ghcr.io/witchcraftcode --tag latest
    ```
-6. Point DNS to the ingress/load balancer.
-7. Run a public smoke test against the deployed hostname:
+2. Prepare release artifacts and validate them.
+   ```bash
+   export VISIONFLOW_API_KEY=your-api-key
+   export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+   export VISIONFLOW_HOST=api.yourdomain.com
+   ./scripts/prepare_release.sh --overlay prod --output-dir /tmp/visionflow-release
+   ```
+3. Create the TLS secret named `visionflow-tls`.
+4. Deploy:
+   ```bash
+   kubectl apply -f /tmp/visionflow-release/visionflow-secret.yaml
+   kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/prod
+   kubectl apply -f /tmp/visionflow-release/visionflow-ingress.yaml
+   ```
+5. Point DNS to the ingress/load balancer.
+6. Run a public smoke test against the deployed hostname:
    ```bash
    BASE_URL=https://your-real-domain VISIONFLOW_API_KEY=your-api-key ./scripts/smoke_test.sh
+   ```
+
+## EKS Production
+1. Build ECR-ready images.
+   ```bash
+   export AWS_REGION=us-east-1
+   export AWS_ACCOUNT_ID=676766460202
+   ./scripts/publish_images.sh --registry ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com --tag latest --platform linux/amd64
+   ```
+2. Prepare EKS release artifacts and validate them.
+   ```bash
+   export VISIONFLOW_API_KEY=your-api-key
+   export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+   export VISIONFLOW_HOST=api.yourdomain.com
+   export VISIONFLOW_ACM_CERTIFICATE_ARN=arn:aws:acm:REGION:ACCOUNT:certificate/CERT_ID
+   ./scripts/prepare_release.sh --overlay eks-prod --output-dir /tmp/visionflow-release
+   ```
+3. Apply:
+   ```bash
+   kubectl apply -f /tmp/visionflow-release/visionflow-secret.yaml
+   kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/eks-prod
+   kubectl apply -f /tmp/visionflow-release/visionflow-ingress.yaml
+   ```
+
+## EKS Temporary Public URL
+1. Prepare a temporary public ALB release without a custom domain.
+   ```bash
+   export VISIONFLOW_API_KEY=your-api-key
+   export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+   ./scripts/prepare_release.sh --overlay eks-prod --public-without-domain --output-dir /tmp/visionflow-release
+   ```
+2. Apply:
+   ```bash
+   kubectl apply -f /tmp/visionflow-release/visionflow-secret.yaml
+   kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/eks-prod
+   kubectl apply -f /tmp/visionflow-release/visionflow-ingress.yaml
+   ```
+3. Get the temporary ALB hostname:
+   ```bash
+   kubectl -n visionflow-prod get ingress visionflow-api
    ```
 
 ## GitHub

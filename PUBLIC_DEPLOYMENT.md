@@ -12,10 +12,8 @@ You can publish them from GitHub Actions using the workflow in:
 
 Or locally:
 ```bash
-docker build -t ghcr.io/witchcraftcode/visionflow-api:latest -f /Users/ashimaverma/visionflow/Dockerfile.api /Users/ashimaverma/visionflow
-docker build -t ghcr.io/witchcraftcode/visionflow-worker:latest -f /Users/ashimaverma/visionflow/Dockerfile.worker /Users/ashimaverma/visionflow
-docker push ghcr.io/witchcraftcode/visionflow-api:latest
-docker push ghcr.io/witchcraftcode/visionflow-worker:latest
+cd /Users/ashimaverma/visionflow
+./scripts/publish_images.sh --registry ghcr.io/witchcraftcode --tag latest --push
 ```
 
 If you use a different registry, update:
@@ -39,29 +37,28 @@ Do not commit real secrets into git.
 Use the example file:
 - `/Users/ashimaverma/visionflow/k8s/overlays/prod/secret.example.yaml`
 
+Or render a fresh manifest from environment variables:
+```bash
+export VISIONFLOW_API_KEY=your-api-key
+export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+python /Users/ashimaverma/visionflow/scripts/render_k8s_secret.py > /tmp/visionflow-secret.yaml
+```
+
 Create the secret in the cluster:
 ```bash
 kubectl create namespace visionflow-prod
-kubectl -n visionflow-prod apply -f /Users/ashimaverma/visionflow/k8s/overlays/prod/secret.example.yaml
+kubectl -n visionflow-prod apply -f /tmp/visionflow-secret.yaml
 ```
 
-Then replace the placeholder values:
+## 4. Prepare release manifests
+Render the secret and ingress together and run preflight validation:
 ```bash
-kubectl -n visionflow-prod edit secret visionflow-secrets
+export VISIONFLOW_HOST=api.visionflow.yourdomain.com
+./scripts/prepare_release.sh --overlay prod --output-dir /tmp/visionflow-release
 ```
-
-## 4. Configure the domain
-Update the hostname in:
-- `/Users/ashimaverma/visionflow/k8s/overlays/prod/ingress.yaml`
-
-Replace:
-- `visionflow.example.com`
-
-With your real domain, for example:
-- `api.visionflow.yourdomain.com`
 
 ## 5. Configure TLS
-The production ingress expects a TLS secret:
+The rendered production ingress expects a TLS secret:
 - `visionflow-tls`
 
 Create it with your certificate:
@@ -76,7 +73,9 @@ If you use cert-manager instead, update the ingress annotations and let cert-man
 ## 6. Deploy production
 ```bash
 kubectl apply -f /Users/ashimaverma/visionflow/k8s/namespaces.yaml
+kubectl apply -f /tmp/visionflow-release/visionflow-secret.yaml
 kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/prod
+kubectl apply -f /tmp/visionflow-release/visionflow-ingress.yaml
 ```
 
 ## 7. Point DNS to the load balancer

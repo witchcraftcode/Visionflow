@@ -42,11 +42,8 @@ aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --
 
 ## 3. Build and push images
 ```bash
-docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/visionflow-api:latest -f /Users/ashimaverma/visionflow/Dockerfile.api /Users/ashimaverma/visionflow
-docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/visionflow-worker:latest -f /Users/ashimaverma/visionflow/Dockerfile.worker /Users/ashimaverma/visionflow
-
-docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/visionflow-api:latest
-docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/visionflow-worker:latest
+cd /Users/ashimaverma/visionflow
+./scripts/publish_images.sh --registry $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com --tag latest --platform linux/amd64 --push
 ```
 
 ## 4. Create the EKS cluster
@@ -95,24 +92,19 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
 ```
 
 ## 6. Create VisionFlow secrets
-Create the namespace and secret:
+Render release artifacts instead of editing checked-in manifests:
 ```bash
-kubectl apply -f /Users/ashimaverma/visionflow/k8s/namespaces.yaml
-kubectl -n visionflow-prod apply -f /Users/ashimaverma/visionflow/k8s/overlays/eks-prod/secret.example.yaml
-kubectl -n visionflow-prod edit secret visionflow-secrets
+export VISIONFLOW_API_KEY=your-api-key
+export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+export VISIONFLOW_HOST=api.yourdomain.com
+export VISIONFLOW_ACM_CERTIFICATE_ARN=arn:aws:acm:REGION:ACCOUNT:certificate/CERT_ID
+./scripts/prepare_release.sh --overlay eks-prod --output-dir /tmp/visionflow-release
 ```
 
 ## 7. Configure TLS and domain
 1. Request or import a certificate in AWS Certificate Manager.
-2. Set your real hostname in:
-   - `/Users/ashimaverma/visionflow/k8s/overlays/eks-prod/ingress.yaml`
-3. Add this annotation to the ingress with your ACM certificate ARN:
-
-```yaml
-alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:REGION:ACCOUNT:certificate/CERT_ID
-```
-
-4. Point your DNS record to the ALB hostname after deployment.
+2. Use the rendered ingress manifest in `/tmp/visionflow-release/visionflow-ingress.yaml`.
+3. Point your DNS record to the ALB hostname after deployment.
 
 ## 8. Set ECR image names in the overlay
 Update:
@@ -125,7 +117,10 @@ With your real AWS region. The account ID is already set to `676766460202`.
 
 ## 9. Deploy VisionFlow to EKS
 ```bash
+kubectl apply -f /Users/ashimaverma/visionflow/k8s/namespaces.yaml
+kubectl apply -f /tmp/visionflow-release/visionflow-secret.yaml
 kubectl apply -k /Users/ashimaverma/visionflow/k8s/overlays/eks-prod
+kubectl apply -f /tmp/visionflow-release/visionflow-ingress.yaml
 ```
 
 Check rollout:

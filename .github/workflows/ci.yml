@@ -9,6 +9,12 @@ on:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    env:
+      VISIONFLOW_API_KEY: ci-api-key
+      VISIONFLOW_ADMIN_API_KEY: ci-admin-key
+      VISIONFLOW_HOST: api.ci.visionflow.example
+      VISIONFLOW_TLS_SECRET_NAME: visionflow-tls
+      VISIONFLOW_ACM_CERTIFICATE_ARN: arn:aws:acm:us-east-1:123456789012:certificate/ci-example
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +29,17 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -q
+
+      - name: Render deployment manifests
+        run: |
+          python scripts/render_k8s_secret.py > /tmp/visionflow-secret.yaml
+          python scripts/render_ingress.py --overlay prod > /tmp/visionflow-ingress-prod.yaml
+          python scripts/render_ingress.py --overlay eks-prod > /tmp/visionflow-ingress-eks.yaml
+
+      - name: Validate deployment preflight
+        run: |
+          python scripts/validate_deployment.py --overlay prod --ingress-file /tmp/visionflow-ingress-prod.yaml --secret-file /tmp/visionflow-secret.yaml
+          python scripts/validate_deployment.py --overlay eks-prod --ingress-file /tmp/visionflow-ingress-eks.yaml --secret-file /tmp/visionflow-secret.yaml
 
       - name: Dependency vulnerability scan
         run: |

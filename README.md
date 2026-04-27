@@ -64,6 +64,44 @@ source /Users/ashimaverma/visionflow/.venv/bin/activate
 python /Users/ashimaverma/visionflow/scripts/verify_models.py
 ```
 
+7. Render a real Kubernetes secret manifest from environment variables:
+
+```bash
+export VISIONFLOW_API_KEY=your-api-key
+export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+python /Users/ashimaverma/visionflow/scripts/render_k8s_secret.py > /tmp/visionflow-secret.yaml
+```
+
+8. Run a production preflight check before deploy:
+
+```bash
+python /Users/ashimaverma/visionflow/scripts/validate_deployment.py --overlay prod
+```
+
+9. Render a real ingress manifest without editing tracked YAML:
+
+```bash
+export VISIONFLOW_HOST=api.yourdomain.com
+python /Users/ashimaverma/visionflow/scripts/render_ingress.py --overlay prod > /tmp/visionflow-ingress.yaml
+```
+
+CI now renders and validates deploy-time secret and ingress manifests for both `prod` and `eks-prod`, so placeholder deployment inputs fail before image publish or release steps.
+
+10. Prepare a production release bundle and print the exact `kubectl` commands:
+
+```bash
+export VISIONFLOW_API_KEY=your-api-key
+export VISIONFLOW_ADMIN_API_KEY=your-admin-key
+export VISIONFLOW_HOST=api.yourdomain.com
+./scripts/prepare_release.sh --overlay prod
+```
+
+11. Build registry-ready images before the infra handoff:
+
+```bash
+./scripts/publish_images.sh --registry ghcr.io/witchcraftcode --tag latest
+```
+
 ## Kubernetes
 1. Build images locally (or push to a registry and update image names):
 
