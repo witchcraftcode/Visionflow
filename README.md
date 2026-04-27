@@ -57,14 +57,20 @@ curl -s http://localhost:8000/status/$JOB_ID | jq
 ./scripts/smoke_test.sh
 ```
 
-6. Verify bundled ONNX artifacts load and produce predictions:
+6. Record live metrics and append them to `/Users/ashimaverma/visionflow/METRICS_RESULTS.md`:
+
+```bash
+python /Users/ashimaverma/visionflow/scripts/record_metrics.py --requests 20 --label "Local Metrics Run"
+```
+
+7. Verify bundled ONNX artifacts load and produce predictions:
 
 ```bash
 source /Users/ashimaverma/visionflow/.venv/bin/activate
 python /Users/ashimaverma/visionflow/scripts/verify_models.py
 ```
 
-7. Render a real Kubernetes secret manifest from environment variables:
+8. Render a real Kubernetes secret manifest from environment variables:
 
 ```bash
 export VISIONFLOW_API_KEY=your-api-key
@@ -72,22 +78,22 @@ export VISIONFLOW_ADMIN_API_KEY=your-admin-key
 python /Users/ashimaverma/visionflow/scripts/render_k8s_secret.py > /tmp/visionflow-secret.yaml
 ```
 
-8. Run a production preflight check before deploy:
+9. Run a production preflight check before deploy:
 
 ```bash
 python /Users/ashimaverma/visionflow/scripts/validate_deployment.py --overlay prod
 ```
 
-9. Render a real ingress manifest without editing tracked YAML:
+10. Render a real ingress manifest without editing tracked YAML:
 
 ```bash
 export VISIONFLOW_HOST=api.yourdomain.com
 python /Users/ashimaverma/visionflow/scripts/render_ingress.py --overlay prod > /tmp/visionflow-ingress.yaml
 ```
 
-CI now renders and validates deploy-time secret and ingress manifests for both `prod` and `eks-prod`, so placeholder deployment inputs fail before image publish or release steps.
+CI now renders and validates deploy-time secret and ingress manifests for both `prod` and `eks-prod`, so placeholder deployment inputs fail before image publish or release steps. CI also runs `scripts/record_metrics.py` after the live smoke test so each validation flow produces a metrics-log entry.
 
-10. Prepare a production release bundle and print the exact `kubectl` commands:
+11. Prepare a production release bundle and print the exact `kubectl` commands:
 
 ```bash
 export VISIONFLOW_API_KEY=your-api-key
@@ -96,7 +102,7 @@ export VISIONFLOW_HOST=api.yourdomain.com
 ./scripts/prepare_release.sh --overlay prod
 ```
 
-11. Build registry-ready images before the infra handoff:
+12. Build registry-ready images before the infra handoff:
 
 ```bash
 ./scripts/publish_images.sh --registry ghcr.io/witchcraftcode --tag latest
