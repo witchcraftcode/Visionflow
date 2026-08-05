@@ -136,3 +136,72 @@ Append future benchmark, smoke-test, production, or CI results below using the s
 - Job statuses: `{"completed": 20}`
 - Failed submissions: `0`
 - Dead-letter depth after run: `0`
+
+## 2026-05-26 20:05:00 IST Docker Compose Redis Database Review
+
+### Environment
+- Services: Docker Compose (`redis`, `api`, `worker`)
+- Smoke test: `./scripts/smoke_test.sh` passed before metrics recording
+- Environment: running service at `http://127.0.0.1:8000`
+- Model tested: `resnet18`
+- Test image: `/Users/ashimaverma/visionflow/test.jpg`
+- Prediction requests attempted: `20`
+
+### Results
+| Metric | Result |
+|---|---:|
+| Requests accepted | 20 |
+| Failed submissions | 0 |
+| Approx enqueue request rate | 12.10 requests/sec |
+| Average `POST /predict` enqueue latency | 81.97 ms |
+| p95 `POST /predict` enqueue latency | 193.13 ms |
+| Max `POST /predict` enqueue latency | 282.69 ms |
+| Terminal jobs observed | 20 |
+| Job success rate | 100.00% |
+| Completed-job throughput | 0.72 jobs/sec |
+| Average job duration | 274.45 ms |
+| p95 job duration | 681.00 ms |
+| Queue depth after run | 0 |
+| Dead-letter depth after run | 0 |
+| Available models | 3 (mobilenet, resnet18, yolov5) |
+
+### Redis Database Review
+| Metric | Result |
+|---|---:|
+| Redis ping | `PONG` |
+| Redis DB keys | 23 |
+| Redis keys with TTL | 23 |
+| Average Redis key TTL | 65,410,491 ms |
+| Redis used memory | 1.66 MiB |
+| Redis peak memory | 1.70 MiB |
+| Job records | 22 |
+| Completed job records | 22 |
+| Queued job records | 0 |
+| Failed job records | 0 |
+| Dead-lettered job records | 0 |
+| Idempotency keys | 0 |
+| Rate-limit keys | 1 |
+| Audit keys | 0 |
+
+### API Metrics Observed
+| Metric | Result |
+|---|---:|
+| `POST /predict` HTTP 200 count | 22 |
+| `GET /status/{job_id}` HTTP 200 count | 48 |
+| `GET /status/{job_id}` HTTP 429 count | 823 |
+| `visionflow_failed_requests_total` for status polling | 823 |
+| `visionflow_queue_depth` | 0 |
+| `visionflow_dead_letter_depth` | 0 |
+
+### SLO Target Status
+| Target | Result | Status |
+|---|---:|---|
+| `POST /predict` p95 enqueue latency `< 300ms` | 193.13 ms | Met |
+| Job completion success rate `>= 99%` | 100.00% | Met |
+| Queue backlog recovery within `15 min` | Queue depth `0` after run | Met for this run |
+| Dead-letter queue growth alert | Dead-letter depth `0` after run | No growth observed |
+
+### Failure and Retry Stats
+- Job statuses: `{"completed": 20}`
+- Failed submissions: `0`
+- Dead-letter depth after run: `0`

@@ -6,9 +6,9 @@ TEST_IMAGE = ROOT_DIR / "test.jpg"
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from app.config import load_model_config
-from app.models.adapter import VisionModelAdapter
-from app.models.registry import get_model, list_models
+from app.config import load_model_config  # noqa: E402
+from app.models.adapter import VisionModelAdapter  # noqa: E402
+from app.models.registry import get_model, list_models  # noqa: E402
 
 
 def main():

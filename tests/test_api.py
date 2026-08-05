@@ -73,6 +73,7 @@ def test_predict_and_status(monkeypatch):
     assert body["status"] == "queued"
     assert body["job_id"] in enqueued
     assert body["model_version"] == "1.0.0"
+    assert body["batch_count"] == 1
 
     status_resp = client.get(f"/status/{body['job_id']}")
     assert status_resp.status_code == 200
@@ -82,6 +83,33 @@ def test_predict_and_status(monkeypatch):
     assert status_body["model_version"] == "1.0.0"
     assert status_body["job_id"] == body["job_id"]
     assert "image_bytes" not in status_body
+
+
+def test_predict_batch_and_status(monkeypatch):
+    store = {}
+    enqueued = []
+
+    monkeypatch.setattr(api, "set_job", lambda job_id, data: store.__setitem__(job_id, data))
+    monkeypatch.setattr(api, "get_job", lambda job_id: store.get(job_id))
+    monkeypatch.setattr(api, "enqueue_job", lambda job_id: enqueued.append(job_id))
+    monkeypatch.setattr(api, "resolve_model_version", lambda model, version: "1.0.0")
+    monkeypatch.setattr(api, "get_idempotency_job", lambda key: None)
+    monkeypatch.setattr(api, "set_idempotency_job", lambda key, job_id: None)
+
+    client = TestClient(api.app)
+    resp = client.post(
+        "/predict/batch",
+        data={"model": "resnet18"},
+        files=[
+            ("files", ("a.jpg", b"one", "image/jpeg")),
+            ("files", ("b.jpg", b"two", "image/jpeg")),
+        ],
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["batch_count"] == 2
+    assert body["job_id"] in enqueued
+    assert "image_bytes_list" in store[body["job_id"]]
 
 
 def test_status_missing_job(monkeypatch):

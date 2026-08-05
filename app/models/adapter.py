@@ -14,3 +14,9 @@ class VisionModelAdapter:
         result = self.model.predict(image_array)
 
         return result
+
+    def predict_batch(self, image_bytes_list: list[bytes]):
+        image_arrays = [preprocess_image(image_bytes, self.config) for image_bytes in image_bytes_list]
+        if hasattr(self.model, "predict_batch"):
+            return self.model.predict_batch(image_arrays)
+        return [self.model.predict(image_array) for image_array in image_arrays]

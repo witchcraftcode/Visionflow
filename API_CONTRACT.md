@@ -79,6 +79,26 @@ Response:
 }
 ```
 
+### `POST /predict/batch`
+- Multipart form:
+  - `model` (required)
+  - `model_version` (optional)
+  - `files` (one or more required images)
+- Optional header:
+  - `Idempotency-Key`
+
+Response:
+```json
+{
+  "job_id": "uuid",
+  "model": "yolov5",
+  "model_version": "1.0.0",
+  "batch_count": 4,
+  "status": "queued",
+  "idempotency_reused": false
+}
+```
+
 ### `GET /status/{job_id}`
 - Returns job state.
 - Never returns raw `image_bytes`.

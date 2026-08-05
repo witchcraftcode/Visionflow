@@ -3,9 +3,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
-
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 

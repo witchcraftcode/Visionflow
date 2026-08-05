@@ -1,0 +1,39 @@
+services:
+  - type: redis
+    name: visionflow-redis
+    ipAllowList: []
+
+  - type: web
+    name: visionflow-api
+    env: docker
+    dockerfilePath: ./Dockerfile.api
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: visionflow-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: visionflow-redis
+          property: port
+
+  - type: worker
+    name: visionflow-worker
+    env: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: starter
+    envVars:
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: visionflow-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: visionflow-redis
+          property: port

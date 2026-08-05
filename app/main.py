@@ -82,6 +82,10 @@ def now_utc_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
+def now_utc_epoch():
+    return datetime.now(timezone.utc).timestamp()
+
+
 def trace_id_from_request(request: Request):
     return getattr(request.state, "trace_id", "unknown")
 
@@ -338,17 +342,57 @@ async def predict(
     file: UploadFile = File(...),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
+    return await _predict_impl(
+        request=request,
+        model=model,
+        model_version=model_version,
+        files=[file],
+        idempotency_key=idempotency_key,
+        batch_mode=False,
+    )
+
+
+@app.post("/predict/batch")
+async def predict_batch(
+    request: Request,
+    model: str = Form(...),
+    model_version: str | None = Form(default=None),
+    files: list[UploadFile] = File(...),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+):
+    return await _predict_impl(
+        request=request,
+        model=model,
+        model_version=model_version,
+        files=files,
+        idempotency_key=idempotency_key,
+        batch_mode=True,
+    )
+
+
+async def _predict_impl(
+    request: Request,
+    model: str,
+    model_version: str | None,
+    files: list[UploadFile],
+    idempotency_key: str | None,
+    batch_mode: bool,
+):
     if not has_model(model, model_version):
         raise HTTPException(
             status_code=400,
             detail={"model": model, "model_version": model_version, "reason": "Unknown model/version"},
         )
 
-    if file.content_type not in ALLOWED_IMAGE_MIME_TYPES:
-        raise HTTPException(
-            status_code=415,
-            detail={"content_type": file.content_type, "allowed": sorted(ALLOWED_IMAGE_MIME_TYPES)},
-        )
+    if batch_mode and not files:
+        raise HTTPException(status_code=400, detail={"reason": "At least one file is required"})
+
+    for file in files:
+        if file.content_type not in ALLOWED_IMAGE_MIME_TYPES:
+            raise HTTPException(
+                status_code=415,
+                detail={"content_type": file.content_type, "allowed": sorted(ALLOWED_IMAGE_MIME_TYPES)},
+            )
 
     resolved_version = resolve_model_version(model, model_version)
 
@@ -365,22 +409,25 @@ async def predict(
                     "idempotency_reused": True,
                 }
 
-    image_bytes = await file.read()
-    if len(image_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail={"max_upload_bytes": MAX_UPLOAD_BYTES, "received_bytes": len(image_bytes)},
-        )
+    image_bytes_list = [await file.read() for file in files]
+    total_bytes = sum(len(image_bytes) for image_bytes in image_bytes_list)
+    for image_bytes in image_bytes_list:
+        if len(image_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail={"max_upload_bytes": MAX_UPLOAD_BYTES, "received_bytes": len(image_bytes)},
+            )
 
     job_id = str(uuid.uuid4())
     created_at = now_utc_iso()
-
-    set_job(job_id, {
+    created_at_epoch = now_utc_epoch()
+    job_payload = {
         "job_id": job_id,
         "status": "queued",
         "model": model,
         "model_version": resolved_version,
         "created_at": created_at,
+        "created_at_epoch": created_at_epoch,
         "updated_at": created_at,
         "duration_ms": None,
         "attempt": 0,
@@ -388,10 +435,17 @@ async def predict(
         "timeout_seconds": DEFAULT_JOB_TIMEOUT_SECONDS,
         "cancel_requested": False,
         "error_code": None,
-        "image_bytes": image_bytes.hex(),
+        "batch_count": len(image_bytes_list),
+        "batch_total_bytes": total_bytes,
         "result": None,
         "error": None,
-    })
+    }
+    if batch_mode:
+        job_payload["image_bytes_list"] = [image_bytes.hex() for image_bytes in image_bytes_list]
+    else:
+        job_payload["image_bytes"] = image_bytes_list[0].hex()
+
+    set_job(job_id, job_payload)
 
     if idempotency_key:
         set_idempotency_job(idempotency_key, job_id)
@@ -410,6 +464,7 @@ async def predict(
         "job_id": job_id,
         "model": model,
         "model_version": resolved_version,
+        "batch_count": len(image_bytes_list),
         "status": "queued",
         "idempotency_reused": False,
     }
@@ -422,7 +477,7 @@ def get_status(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail={"job_id": job_id, "reason": "Job not found"})
 
-    response = {k: v for k, v in job.items() if k != "image_bytes"}
+    response = {k: v for k, v in job.items() if k not in {"image_bytes", "image_bytes_list"}}
     log_event(
         "job_status_read",
         job_id=job_id,

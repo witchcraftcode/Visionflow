@@ -46,6 +46,14 @@ def get_job(job_id: str):
     return json.loads(data)
 
 
+def iter_jobs():
+    for key in redis_client.scan_iter(match="job:*"):
+        job_id = key.split("job:", 1)[1]
+        job = get_job(job_id)
+        if job is not None:
+            yield job_id, job
+
+
 def set_idempotency_job(key: str, job_id: str):
     redis_client.set(f"idempotency:{key}", job_id, ex=IDEMPOTENCY_TTL_SECONDS)
 
