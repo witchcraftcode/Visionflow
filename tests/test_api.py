@@ -4,9 +4,57 @@ import pytest
 from app import main as api
 from app import security
 from app.api.v1 import health as health_api
-from app.api.v1 import jobs as jobs_api
 from app.api.v1 import models as models_api
 from app.services import inference
+from app.services.queue import QueueService
+
+
+class InMemoryQueueBackend:
+    def __init__(self, store=None):
+        self.store = {} if store is None else store
+        self.enqueued = []
+        self.dead_lettered = []
+        self.idempotency = {}
+
+    def enqueue_job(self, job_id: str):
+        self.enqueued.append(job_id)
+
+    def enqueue_dead_letter(self, job_id: str):
+        self.dead_lettered.append(job_id)
+
+    def dequeue_job(self):
+        return self.enqueued.pop(0)
+
+    def set_job(self, job_id: str, data: dict):
+        self.store[job_id] = data
+
+    def get_job(self, job_id: str):
+        return self.store.get(job_id)
+
+    def iter_jobs(self):
+        return iter(self.store.items())
+
+    def set_idempotency_job(self, key: str, job_id: str):
+        self.idempotency[key] = job_id
+
+    def get_idempotency_job(self, key: str):
+        return self.idempotency.get(key)
+
+    def queue_depth(self) -> int:
+        return len(self.enqueued)
+
+    def dead_letter_depth(self) -> int:
+        return len(self.dead_lettered)
+
+    def ping(self) -> bool:
+        return True
+
+
+def use_memory_queue(monkeypatch, store=None):
+    backend = InMemoryQueueBackend(store=store)
+    service = QueueService(backend)
+    monkeypatch.setattr(inference.queue, "queue_service", service)
+    return backend
 
 
 @pytest.fixture(autouse=True)
@@ -51,25 +99,8 @@ def test_models():
 
 
 def test_predict_and_status(monkeypatch):
-    store = {}
-    enqueued = []
-
-    def set_job(job_id, data):
-        store[job_id] = data
-
-    def get_job(job_id):
-        return store.get(job_id)
-
-    def enqueue_job(job_id):
-        enqueued.append(job_id)
-
-    monkeypatch.setattr(inference.queue, "set_job", set_job)
-    monkeypatch.setattr(inference.queue, "get_job", get_job)
-    monkeypatch.setattr(inference.queue, "enqueue_job", enqueue_job)
-    monkeypatch.setattr(jobs_api.queue, "get_job", get_job)
+    backend = use_memory_queue(monkeypatch)
     monkeypatch.setattr(inference.registry, "resolve_model_version", lambda model, version: "1.0.0")
-    monkeypatch.setattr(inference.queue, "get_idempotency_job", lambda key: None)
-    monkeypatch.setattr(inference.queue, "set_idempotency_job", lambda key, job_id: None)
 
     client = TestClient(api.app)
 
@@ -81,7 +112,7 @@ def test_predict_and_status(monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "queued"
-    assert body["job_id"] in enqueued
+    assert body["job_id"] in backend.enqueued
     assert body["model_version"] == "1.0.0"
     assert body["batch_count"] == 1
 
@@ -96,15 +127,8 @@ def test_predict_and_status(monkeypatch):
 
 
 def test_predict_batch_and_status(monkeypatch):
-    store = {}
-    enqueued = []
-
-    monkeypatch.setattr(inference.queue, "set_job", lambda job_id, data: store.__setitem__(job_id, data))
-    monkeypatch.setattr(inference.queue, "get_job", lambda job_id: store.get(job_id))
-    monkeypatch.setattr(inference.queue, "enqueue_job", lambda job_id: enqueued.append(job_id))
+    backend = use_memory_queue(monkeypatch)
     monkeypatch.setattr(inference.registry, "resolve_model_version", lambda model, version: "1.0.0")
-    monkeypatch.setattr(inference.queue, "get_idempotency_job", lambda key: None)
-    monkeypatch.setattr(inference.queue, "set_idempotency_job", lambda key, job_id: None)
 
     client = TestClient(api.app)
     resp = client.post(
@@ -118,15 +142,12 @@ def test_predict_batch_and_status(monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["batch_count"] == 2
-    assert body["job_id"] in enqueued
-    assert "image_bytes_list" in store[body["job_id"]]
+    assert body["job_id"] in backend.enqueued
+    assert "image_bytes_list" in backend.store[body["job_id"]]
 
 
 def test_status_missing_job(monkeypatch):
-    def get_job(job_id):
-        return None
-
-    monkeypatch.setattr(jobs_api.queue, "get_job", get_job)
+    use_memory_queue(monkeypatch)
     client = TestClient(api.app)
     resp = client.get("/status/does-not-exist")
     assert resp.status_code == 404
@@ -156,8 +177,8 @@ def test_predict_idempotency_reuse(monkeypatch):
             "error": None,
         }
     }
-    monkeypatch.setattr(inference.queue, "get_idempotency_job", lambda key: "job-1")
-    monkeypatch.setattr(inference.queue, "get_job", lambda job_id: store.get(job_id))
+    backend = use_memory_queue(monkeypatch, store=store)
+    backend.idempotency["abc"] = "job-1"
     monkeypatch.setattr(inference.registry, "has_model", lambda model, version=None: True)
     client = TestClient(api.app)
     resp = client.post(
@@ -182,15 +203,7 @@ def test_cancel_job(monkeypatch):
             "cancel_requested": False,
         }
     }
-
-    def get_job(job_id):
-        return store.get(job_id)
-
-    def set_job(job_id, data):
-        store[job_id] = data
-
-    monkeypatch.setattr(jobs_api.queue, "get_job", get_job)
-    monkeypatch.setattr(jobs_api.queue, "set_job", set_job)
+    use_memory_queue(monkeypatch, store=store)
     client = TestClient(api.app)
     resp = client.post("/jobs/job-1/cancel")
     assert resp.status_code == 200

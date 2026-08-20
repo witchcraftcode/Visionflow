@@ -1,4 +1,52 @@
 from app import worker as worker_mod
+from app.services.queue import QueueService
+
+
+class InMemoryQueueBackend:
+    def __init__(self, store=None, enqueued=None):
+        self.store = {} if store is None else store
+        self.enqueued = [] if enqueued is None else enqueued
+        self.dead_lettered = []
+        self.idempotency = {}
+
+    def enqueue_job(self, job_id: str):
+        self.enqueued.append(job_id)
+
+    def enqueue_dead_letter(self, job_id: str):
+        self.dead_lettered.append(job_id)
+
+    def dequeue_job(self):
+        return self.enqueued.pop(0)
+
+    def set_job(self, job_id: str, data: dict):
+        self.store[job_id] = data
+
+    def get_job(self, job_id: str):
+        return self.store.get(job_id)
+
+    def iter_jobs(self):
+        return iter(self.store.items())
+
+    def set_idempotency_job(self, key: str, job_id: str):
+        self.idempotency[key] = job_id
+
+    def get_idempotency_job(self, key: str):
+        return self.idempotency.get(key)
+
+    def queue_depth(self) -> int:
+        return len(self.enqueued)
+
+    def dead_letter_depth(self) -> int:
+        return len(self.dead_lettered)
+
+    def ping(self) -> bool:
+        return True
+
+
+def use_memory_queue(monkeypatch, store, enqueued):
+    backend = InMemoryQueueBackend(store=store, enqueued=enqueued)
+    monkeypatch.setattr(worker_mod, "queue_service", QueueService(backend))
+    return backend
 
 
 class DummyModel:
@@ -9,15 +57,6 @@ class DummyModel:
 def test_worker_process_one_job(monkeypatch):
     store = {}
     job_id = "job-123"
-
-    def dequeue_job():
-        return job_id
-
-    def get_job(jid):
-        return store.get(jid)
-
-    def set_job(jid, data):
-        store[jid] = data
 
     def get_model(name, version=None):
         return DummyModel()
@@ -36,9 +75,7 @@ def test_worker_process_one_job(monkeypatch):
         "error": None,
     }
 
-    monkeypatch.setattr(worker_mod, "dequeue_job", dequeue_job)
-    monkeypatch.setattr(worker_mod, "get_job", get_job)
-    monkeypatch.setattr(worker_mod, "set_job", set_job)
+    use_memory_queue(monkeypatch, store=store, enqueued=[job_id])
     monkeypatch.setattr(worker_mod, "get_model", get_model)
     monkeypatch.setattr(worker_mod, "load_model_config", load_model_config)
     monkeypatch.setattr(worker_mod.VisionModelAdapter, "predict", fake_predict)
@@ -67,16 +104,6 @@ def test_worker_process_one_job(monkeypatch):
 def test_worker_retries_then_requeues(monkeypatch):
     store = {}
     job_id = "job-retry"
-    requeued = []
-
-    def dequeue_job():
-        return job_id
-
-    def get_job(jid):
-        return store.get(jid)
-
-    def set_job(jid, data):
-        store[jid] = data
 
     def get_model(name, version=None):
         return DummyModel()
@@ -87,14 +114,11 @@ def test_worker_retries_then_requeues(monkeypatch):
     def fake_predict(self, image_bytes):
         raise RuntimeError("transient failure")
 
-    monkeypatch.setattr(worker_mod, "dequeue_job", dequeue_job)
-    monkeypatch.setattr(worker_mod, "get_job", get_job)
-    monkeypatch.setattr(worker_mod, "set_job", set_job)
+    backend = use_memory_queue(monkeypatch, store=store, enqueued=[job_id])
     monkeypatch.setattr(worker_mod, "get_model", get_model)
     monkeypatch.setattr(worker_mod, "load_model_config", load_model_config)
     monkeypatch.setattr(worker_mod.VisionModelAdapter, "predict", fake_predict)
     monkeypatch.setattr(worker_mod.time, "sleep", lambda s: None)
-    monkeypatch.setattr(worker_mod, "enqueue_job", lambda jid: requeued.append(jid))
     monkeypatch.setattr(worker_mod, "track_queue_wait", lambda *args, **kwargs: None)
 
     store[job_id] = {
@@ -113,22 +137,12 @@ def test_worker_retries_then_requeues(monkeypatch):
 
     assert store[job_id]["status"] == "queued"
     assert store[job_id]["attempt"] == 1
-    assert requeued == [job_id]
+    assert backend.enqueued == [job_id]
 
 
 def test_worker_dead_letters_after_exhausted_retries(monkeypatch):
     store = {}
     job_id = "job-dlq"
-    dead_letter = []
-
-    def dequeue_job():
-        return job_id
-
-    def get_job(jid):
-        return store.get(jid)
-
-    def set_job(jid, data):
-        store[jid] = data
 
     def get_model(name, version=None):
         return DummyModel()
@@ -139,14 +153,11 @@ def test_worker_dead_letters_after_exhausted_retries(monkeypatch):
     def fake_predict(self, image_bytes):
         raise RuntimeError("permanent failure")
 
-    monkeypatch.setattr(worker_mod, "dequeue_job", dequeue_job)
-    monkeypatch.setattr(worker_mod, "get_job", get_job)
-    monkeypatch.setattr(worker_mod, "set_job", set_job)
+    backend = use_memory_queue(monkeypatch, store=store, enqueued=[job_id])
     monkeypatch.setattr(worker_mod, "get_model", get_model)
     monkeypatch.setattr(worker_mod, "load_model_config", load_model_config)
     monkeypatch.setattr(worker_mod.VisionModelAdapter, "predict", fake_predict)
     monkeypatch.setattr(worker_mod.time, "sleep", lambda s: None)
-    monkeypatch.setattr(worker_mod, "enqueue_dead_letter", lambda jid: dead_letter.append(jid))
     monkeypatch.setattr(worker_mod, "track_queue_wait", lambda *args, **kwargs: None)
 
     store[job_id] = {
@@ -164,7 +175,7 @@ def test_worker_dead_letters_after_exhausted_retries(monkeypatch):
     worker_mod.process_one_job()
 
     assert store[job_id]["status"] == "dead_lettered"
-    assert dead_letter == [job_id]
+    assert backend.dead_lettered == [job_id]
 
 
 def test_recover_stale_jobs_requeues_processing_job(monkeypatch):
@@ -184,9 +195,7 @@ def test_recover_stale_jobs_requeues_processing_job(monkeypatch):
     requeued = []
 
     monkeypatch.setattr(worker_mod, "_now", lambda: now)
-    monkeypatch.setattr(worker_mod, "iter_jobs", lambda: iter(store.items()))
-    monkeypatch.setattr(worker_mod, "set_job", lambda jid, data: store.__setitem__(jid, data))
-    monkeypatch.setattr(worker_mod, "enqueue_job", lambda jid: requeued.append(jid))
+    backend = use_memory_queue(monkeypatch, store=store, enqueued=requeued)
     monkeypatch.setattr(worker_mod, "set_worker_health", lambda **kwargs: None)
 
     recovered, stale_detected = worker_mod.recover_stale_jobs()
@@ -202,9 +211,7 @@ def test_worker_processes_batch_job(monkeypatch):
     store = {}
     job_id = "job-batch"
 
-    monkeypatch.setattr(worker_mod, "dequeue_job", lambda: job_id)
-    monkeypatch.setattr(worker_mod, "get_job", lambda jid: store.get(jid))
-    monkeypatch.setattr(worker_mod, "set_job", lambda jid, data: store.__setitem__(jid, data))
+    use_memory_queue(monkeypatch, store=store, enqueued=[job_id])
     monkeypatch.setattr(worker_mod, "get_model", lambda name, version=None: DummyModel())
     monkeypatch.setattr(worker_mod, "load_model_config", lambda name: {"input_size": [224, 224], "color_mode": "RGB"})
     monkeypatch.setattr(worker_mod, "track_queue_wait", lambda *args, **kwargs: None)
@@ -239,15 +246,6 @@ def test_worker_resets_started_at_for_requeued_stale_job(monkeypatch):
     stale_started_at = 100.0
     now = 1_000.0
 
-    def dequeue_job():
-        return job_id
-
-    def get_job(jid):
-        return store.get(jid)
-
-    def set_job(jid, data):
-        store[jid] = data
-
     def get_model(name, version=None):
         return DummyModel()
 
@@ -272,9 +270,7 @@ def test_worker_resets_started_at_for_requeued_stale_job(monkeypatch):
     }
 
     monkeypatch.setattr(worker_mod, "_now", lambda: now)
-    monkeypatch.setattr(worker_mod, "dequeue_job", dequeue_job)
-    monkeypatch.setattr(worker_mod, "get_job", get_job)
-    monkeypatch.setattr(worker_mod, "set_job", set_job)
+    use_memory_queue(monkeypatch, store=store, enqueued=[job_id])
     monkeypatch.setattr(worker_mod, "get_model", get_model)
     monkeypatch.setattr(worker_mod, "load_model_config", load_model_config)
     monkeypatch.setattr(worker_mod.VisionModelAdapter, "predict", fake_predict)
