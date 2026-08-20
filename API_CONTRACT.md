@@ -32,6 +32,9 @@ All API errors use:
 ### `GET /models/{model_name}/versions`
 - Returns all registered versions for one model.
 
+### `GET /models/{model_name}/versions/{version}`
+- Returns metadata for one registered model version.
+
 ### `POST /models/register`
 - Registers new model version metadata.
 - Currently supports runtime `onnx`.
@@ -49,6 +52,22 @@ Request:
   "resources": {"cpu":"500m","memory":"512Mi"}
 }
 ```
+
+### `PUT /models/{model_name}/versions/{version}`
+- Updates registered model version metadata.
+- Currently supports runtime `onnx`.
+
+Request fields are optional:
+```json
+{
+  "artifact_uri": "app/models/onnx/custom-v2.onnx",
+  "resources": {"cpu":"1000m","memory":"1Gi"}
+}
+```
+
+### `DELETE /models/{model_name}/versions/{version}`
+- Deletes a registered model version.
+- If the deleted version is the default, the registry promotes the next available version.
 
 ### `POST /models/{model_name}/promote`
 - Promotes a model version to default.

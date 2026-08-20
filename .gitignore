@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 dump.rdb
+visionflow.db
 tempCodeRunnerFile.py
 app/tempCodeRunnerFile.py
 from

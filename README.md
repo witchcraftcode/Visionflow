@@ -8,15 +8,19 @@ It is structured like a production-minded ML inference platform: queue-backed wo
 
 ```text
 app/
-  main.py                    FastAPI app, routes, request middleware, and error handling
-  worker.py                  Background job processor for model inference
+  main.py                    FastAPI app assembly
+  api/v1/                    Versioned route modules
+  core/                      Config, request middleware, and structured logging
+  db/                        SQLAlchemy engine, sessions, and ORM models
+  services/                  Queue, registry, and inference service boundaries
+  worker/                    Background job processor for model inference
   worker_runner.py           Worker process entry point
   queue/redis_queue.py       Redis queue, job store, idempotency, and rate-limit helpers
   models/                    Model loaders, ONNX wrappers, and prediction adapters
   models/onnx/               Bundled ONNX model artifacts
   preprocessing/image.py     Image decoding, resizing, color conversion, and normalization
   configs/model_registry.json
-                             Model catalog, versions, schemas, and runtime metadata
+                             Seed data for the PostgreSQL-backed model registry
   configs/models/*.json      Per-model preprocessing settings
   security.py                API key, admin key, and rate-limit checks
   observability.py           Structured logs and Prometheus-style metrics
@@ -275,10 +279,20 @@ Per-model preprocessing configs live in:
 
 Adjust `input_size`, `color_mode`, and `normalization` to match each model.
 
+Model registry metadata is stored in SQL tables (`models`, `model_versions`, `jobs`, `deployments`).
+For local development, `DATABASE_URL` defaults to `sqlite:///./visionflow.db`; for RDS, set it to a PostgreSQL URL and run:
+
+```bash
+alembic upgrade head
+```
+
 ## API
 - `GET /models`
 - `GET /models/{model_name}/versions`
+- `GET /models/{model_name}/versions/{version}`
 - `POST /models/register`
+- `PUT /models/{model_name}/versions/{version}`
+- `DELETE /models/{model_name}/versions/{version}`
 - `POST /models/{model_name}/promote`
 - `GET /admin/audit`
 - `POST /predict` (multipart form: `model`, optional `model_version`, `file`; optional `Idempotency-Key` header)
@@ -304,6 +318,8 @@ Adjust `input_size`, `color_mode`, and `normalization` to match each model.
 - `RATE_LIMIT_REQUESTS` (default `60`)
 - `RATE_LIMIT_WINDOW_SECONDS` (default `60`)
 - `AUDIT_LOG_LIMIT` (default `200`)
+- `DATABASE_URL` (default `sqlite:///./visionflow.db`; use PostgreSQL/RDS in deployed environments)
+- `AUTO_CREATE_SQLITE_SCHEMA` (default `true`; local SQLite convenience only)
 
 ## Quick Git Sync
 Use helper script to commit and push local changes:

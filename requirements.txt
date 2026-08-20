@@ -8,3 +8,6 @@ onnxruntime
 psutil
 pytest
 httpx
+SQLAlchemy
+alembic
+psycopg2-binary

@@ -34,8 +34,10 @@ def error_payload(code: str, message: str, details: dict[str, Any], trace_id: st
     }
 
 
-def is_admin_path(path: str) -> bool:
+def is_admin_path(path: str, method: str = "GET") -> bool:
     normalized = api_path(path)
+    if normalized.startswith("/models/") and method in {"POST", "PUT", "PATCH", "DELETE"}:
+        return True
     return normalized in settings.admin_paths or (
         normalized.startswith("/models/") and normalized.endswith("/promote")
     )
@@ -83,7 +85,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 track_http_metrics(request.method, request.url.path, 429, start_time)
                 return response
 
-            if is_admin_path(request.url.path):
+            if is_admin_path(request.url.path, request.method):
                 admin_key = request.headers.get("X-Admin-Key")
                 if not security.verify_admin_key(admin_key):
                     response = JSONResponse(

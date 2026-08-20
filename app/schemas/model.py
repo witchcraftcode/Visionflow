@@ -14,6 +14,15 @@ class RegisterModelVersionRequest(BaseModel):
     resources: dict[str, Any]
 
 
+class UpdateModelVersionRequest(BaseModel):
+    runtime: str | None = None
+    artifact_uri: str | None = None
+    class_path: str | None = None
+    input_schema: dict[str, Any] | None = None
+    output_schema: dict[str, Any] | None = None
+    resources: dict[str, Any] | None = None
+
+
 class PromoteModelVersionRequest(BaseModel):
     version: str
 
