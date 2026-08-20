@@ -2,13 +2,18 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app import main as api
+from app import security
+from app.api.v1 import health as health_api
+from app.api.v1 import jobs as jobs_api
+from app.api.v1 import models as models_api
+from app.services import inference
 
 
 @pytest.fixture(autouse=True)
 def bypass_security(monkeypatch):
-    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
-    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
-    monkeypatch.setattr(api, "verify_admin_key", lambda provided: True)
+    monkeypatch.setattr(security, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(security, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(security, "verify_admin_key", lambda provided: True)
 
 
 def test_health():
@@ -17,11 +22,15 @@ def test_health():
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
 
+    versioned_resp = client.get("/api/v1/health")
+    assert versioned_resp.status_code == 200
+    assert versioned_resp.json() == {"status": "ok"}
+
 
 def test_ready(monkeypatch):
-    monkeypatch.setattr(api, "ping", lambda: True)
-    monkeypatch.setattr(api, "queue_depth", lambda: 2)
-    monkeypatch.setattr(api, "dead_letter_depth", lambda: 1)
+    monkeypatch.setattr(health_api.queue, "ping", lambda: True)
+    monkeypatch.setattr(health_api.queue, "queue_depth", lambda: 2)
+    monkeypatch.setattr(health_api.queue, "dead_letter_depth", lambda: 1)
     client = TestClient(api.app)
     resp = client.get("/ready")
     assert resp.status_code == 200
@@ -54,12 +63,13 @@ def test_predict_and_status(monkeypatch):
     def enqueue_job(job_id):
         enqueued.append(job_id)
 
-    monkeypatch.setattr(api, "set_job", set_job)
-    monkeypatch.setattr(api, "get_job", get_job)
-    monkeypatch.setattr(api, "enqueue_job", enqueue_job)
-    monkeypatch.setattr(api, "resolve_model_version", lambda model, version: "1.0.0")
-    monkeypatch.setattr(api, "get_idempotency_job", lambda key: None)
-    monkeypatch.setattr(api, "set_idempotency_job", lambda key, job_id: None)
+    monkeypatch.setattr(inference.queue, "set_job", set_job)
+    monkeypatch.setattr(inference.queue, "get_job", get_job)
+    monkeypatch.setattr(inference.queue, "enqueue_job", enqueue_job)
+    monkeypatch.setattr(jobs_api.queue, "get_job", get_job)
+    monkeypatch.setattr(inference.registry, "resolve_model_version", lambda model, version: "1.0.0")
+    monkeypatch.setattr(inference.queue, "get_idempotency_job", lambda key: None)
+    monkeypatch.setattr(inference.queue, "set_idempotency_job", lambda key, job_id: None)
 
     client = TestClient(api.app)
 
@@ -89,12 +99,12 @@ def test_predict_batch_and_status(monkeypatch):
     store = {}
     enqueued = []
 
-    monkeypatch.setattr(api, "set_job", lambda job_id, data: store.__setitem__(job_id, data))
-    monkeypatch.setattr(api, "get_job", lambda job_id: store.get(job_id))
-    monkeypatch.setattr(api, "enqueue_job", lambda job_id: enqueued.append(job_id))
-    monkeypatch.setattr(api, "resolve_model_version", lambda model, version: "1.0.0")
-    monkeypatch.setattr(api, "get_idempotency_job", lambda key: None)
-    monkeypatch.setattr(api, "set_idempotency_job", lambda key, job_id: None)
+    monkeypatch.setattr(inference.queue, "set_job", lambda job_id, data: store.__setitem__(job_id, data))
+    monkeypatch.setattr(inference.queue, "get_job", lambda job_id: store.get(job_id))
+    monkeypatch.setattr(inference.queue, "enqueue_job", lambda job_id: enqueued.append(job_id))
+    monkeypatch.setattr(inference.registry, "resolve_model_version", lambda model, version: "1.0.0")
+    monkeypatch.setattr(inference.queue, "get_idempotency_job", lambda key: None)
+    monkeypatch.setattr(inference.queue, "set_idempotency_job", lambda key, job_id: None)
 
     client = TestClient(api.app)
     resp = client.post(
@@ -116,7 +126,7 @@ def test_status_missing_job(monkeypatch):
     def get_job(job_id):
         return None
 
-    monkeypatch.setattr(api, "get_job", get_job)
+    monkeypatch.setattr(jobs_api.queue, "get_job", get_job)
     client = TestClient(api.app)
     resp = client.get("/status/does-not-exist")
     assert resp.status_code == 404
@@ -146,9 +156,9 @@ def test_predict_idempotency_reuse(monkeypatch):
             "error": None,
         }
     }
-    monkeypatch.setattr(api, "get_idempotency_job", lambda key: "job-1")
-    monkeypatch.setattr(api, "get_job", lambda job_id: store.get(job_id))
-    monkeypatch.setattr(api, "has_model", lambda model, version=None: True)
+    monkeypatch.setattr(inference.queue, "get_idempotency_job", lambda key: "job-1")
+    monkeypatch.setattr(inference.queue, "get_job", lambda job_id: store.get(job_id))
+    monkeypatch.setattr(inference.registry, "has_model", lambda model, version=None: True)
     client = TestClient(api.app)
     resp = client.post(
         "/predict",
@@ -179,8 +189,8 @@ def test_cancel_job(monkeypatch):
     def set_job(job_id, data):
         store[job_id] = data
 
-    monkeypatch.setattr(api, "get_job", get_job)
-    monkeypatch.setattr(api, "set_job", set_job)
+    monkeypatch.setattr(jobs_api.queue, "get_job", get_job)
+    monkeypatch.setattr(jobs_api.queue, "set_job", set_job)
     client = TestClient(api.app)
     resp = client.post("/jobs/job-1/cancel")
     assert resp.status_code == 200
@@ -197,7 +207,7 @@ def test_metrics_endpoint():
 
 def test_admin_audit_endpoint(monkeypatch):
     monkeypatch.setattr(
-        api,
+        models_api,
         "list_admin_audit_events",
         lambda limit=50: [{"action": "model_registered", "model": "resnet18", "version": "1.0.0"}],
     )
@@ -208,7 +218,7 @@ def test_admin_audit_endpoint(monkeypatch):
 
 
 def test_auth_rejection(monkeypatch):
-    monkeypatch.setattr(api, "verify_api_key", lambda provided: False)
+    monkeypatch.setattr(security, "verify_api_key", lambda provided: False)
     client = TestClient(api.app)
     resp = client.get("/models")
     assert resp.status_code == 401
@@ -216,8 +226,8 @@ def test_auth_rejection(monkeypatch):
 
 
 def test_rate_limit_rejection(monkeypatch):
-    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
-    monkeypatch.setattr(api, "allow_request", lambda client_id: False)
+    monkeypatch.setattr(security, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(security, "allow_request", lambda client_id: False)
     client = TestClient(api.app)
     resp = client.get("/models")
     assert resp.status_code == 429
@@ -225,9 +235,9 @@ def test_rate_limit_rejection(monkeypatch):
 
 
 def test_admin_rejection_for_register(monkeypatch):
-    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
-    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
-    monkeypatch.setattr(api, "verify_admin_key", lambda provided: False)
+    monkeypatch.setattr(security, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(security, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(security, "verify_admin_key", lambda provided: False)
     client = TestClient(api.app)
     resp = client.post(
         "/models/register",
@@ -247,9 +257,9 @@ def test_admin_rejection_for_register(monkeypatch):
 
 
 def test_admin_rejection_for_promote(monkeypatch):
-    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
-    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
-    monkeypatch.setattr(api, "verify_admin_key", lambda provided: False)
+    monkeypatch.setattr(security, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(security, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(security, "verify_admin_key", lambda provided: False)
     client = TestClient(api.app)
     resp = client.post("/models/resnet18/promote", json={"version": "1.0.0"})
     assert resp.status_code == 403

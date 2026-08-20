@@ -1,28 +1,17 @@
-import json
-import logging
 import threading
 import time
 from collections import defaultdict
 
-LOGGER = logging.getLogger("visionflow")
-if not LOGGER.handlers:
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(message)s"))
-    LOGGER.addHandler(handler)
-LOGGER.setLevel(logging.INFO)
+from app.core.logging import log_event
 
 _LOCK = threading.Lock()
 _COUNTERS = defaultdict(float)
 _HISTOGRAMS = defaultdict(list)
 _GAUGES = {}
 
-
-def log_event(event: str, **fields):
-    payload = {"event": event, **fields}
-    LOGGER.info(json.dumps(payload, sort_keys=True))
-
-
 def normalize_metrics_path(path: str) -> str:
+    if path.startswith("/api/v1/"):
+        path = path.removeprefix("/api/v1")
     if path.startswith("/status/"):
         return "/status/{job_id}"
     if path.startswith("/jobs/") and path.endswith("/cancel"):

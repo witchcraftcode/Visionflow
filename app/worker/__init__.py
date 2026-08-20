@@ -1,10 +1,9 @@
 import time
 import traceback
 
-from app.queue.redis_queue import dequeue_job, enqueue_dead_letter, enqueue_job, get_job, iter_jobs, set_job
+from app.core.config import load_model_config
 from app.models.adapter import VisionModelAdapter
 from app.models.registry import get_model
-from app.config import load_model_config
 from app.observability import (
     log_event,
     set_worker_health,
@@ -13,6 +12,7 @@ from app.observability import (
     track_model_inference,
     track_queue_wait,
 )
+from app.queue.redis_queue import dequeue_job, enqueue_dead_letter, enqueue_job, get_job, iter_jobs, set_job
 
 RETRY_BACKOFF_SECONDS = [1, 2, 4]
 RECOVERY_SCAN_INTERVAL_SECONDS = 30
@@ -201,15 +201,18 @@ def process_one_job():
             log_event("job_timed_out", job_id=job_id, model=model_name, model_version=model_version)
             return
 
-        set_job(job_id, {
-            **processing_job,
-            "status": "completed",
-            "result": result,
-            "error_code": None,
-            "error": None,
-            "updated_at": _now_iso(),
-            "duration_ms": _duration_ms(processing_job),
-        })
+        set_job(
+            job_id,
+            {
+                **processing_job,
+                "status": "completed",
+                "result": result,
+                "error_code": None,
+                "error": None,
+                "updated_at": _now_iso(),
+                "duration_ms": _duration_ms(processing_job),
+            },
+        )
         track_job_status("completed", model_name, model_version or "unknown")
         duration_ms = _duration_ms(processing_job)
         if duration_ms is not None:

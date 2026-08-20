@@ -2,13 +2,15 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app import main as api
+from app import security
+from app.api.v1 import models as models_api
 
 
 @pytest.fixture(autouse=True)
 def bypass_security(monkeypatch):
-    monkeypatch.setattr(api, "verify_api_key", lambda provided: True)
-    monkeypatch.setattr(api, "allow_request", lambda client_id: True)
-    monkeypatch.setattr(api, "verify_admin_key", lambda provided: True)
+    monkeypatch.setattr(security, "verify_api_key", lambda provided: True)
+    monkeypatch.setattr(security, "allow_request", lambda client_id: True)
+    monkeypatch.setattr(security, "verify_admin_key", lambda provided: True)
 
 
 def test_model_versions_unknown():
@@ -28,10 +30,10 @@ def test_register_and_promote_model(monkeypatch):
     def promote_model_version(model_name, version):
         promote_calls.append((model_name, version))
 
-    monkeypatch.setattr(api, "register_model_version", register_model_version)
-    monkeypatch.setattr(api, "promote_model_version", promote_model_version)
+    monkeypatch.setattr(models_api.registry, "register_model_version", register_model_version)
+    monkeypatch.setattr(models_api.registry, "promote_model_version", promote_model_version)
     monkeypatch.setattr(
-        api,
+        models_api,
         "record_admin_audit_event",
         lambda action, **fields: audit_calls.append((action, fields)),
     )
