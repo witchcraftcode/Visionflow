@@ -20,6 +20,7 @@ def _model_version_payload(version: ModelVersion, model: RegisteredModel) -> dic
     return {
         "runtime": version.runtime,
         "artifact_uri": version.artifact_uri,
+        "artifact_sha256": version.artifact_sha256,
         "class": version.class_path,
         "input_schema": version.input_schema,
         "output_schema": version.output_schema,
@@ -64,6 +65,7 @@ def seed_registry(session: Session):
                     version=version,
                     runtime=version_payload["runtime"],
                     artifact_uri=version_payload["artifact_uri"],
+                    artifact_sha256=version_payload.get("artifact_sha256"),
                     class_path=version_payload["class"],
                     input_schema=version_payload.get("input_schema", {}),
                     output_schema=version_payload.get("output_schema", {}),
@@ -159,6 +161,7 @@ def register_model_version(model_name: str, version: str, payload: dict):
                     version=version,
                     runtime=payload["runtime"],
                     artifact_uri=payload["artifact_uri"],
+                    artifact_sha256=payload.get("artifact_sha256"),
                     class_path=payload["class"],
                     input_schema=payload.get("input_schema", {}),
                     output_schema=payload.get("output_schema", {}),
@@ -185,6 +188,7 @@ def update_model_version(model_name: str, version: str, payload: dict):
             for source_key, attr in {
                 "runtime": "runtime",
                 "artifact_uri": "artifact_uri",
+                "artifact_sha256": "artifact_sha256",
                 "class": "class_path",
                 "input_schema": "input_schema",
                 "output_schema": "output_schema",

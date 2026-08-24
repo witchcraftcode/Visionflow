@@ -16,6 +16,8 @@ class Settings(BaseModel):
     configs_dir: Path = Path(__file__).resolve().parents[1] / "configs" / "models"
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./visionflow.db")
     auto_create_sqlite_schema: bool = os.getenv("AUTO_CREATE_SQLITE_SCHEMA", "true").lower() == "true"
+    model_artifact_bucket: str = os.getenv("MODEL_ARTIFACT_BUCKET", "visionflow-model-artifacts")
+    model_cache_dir: Path = Path(os.getenv("MODEL_CACHE_DIR", "/tmp/visionflow-model-cache"))
 
 
 settings = Settings()

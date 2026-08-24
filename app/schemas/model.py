@@ -8,6 +8,7 @@ class RegisterModelVersionRequest(BaseModel):
     version: str
     runtime: str
     artifact_uri: str
+    artifact_sha256: str | None = None
     class_path: str
     input_schema: dict[str, Any]
     output_schema: dict[str, Any]
@@ -17,6 +18,7 @@ class RegisterModelVersionRequest(BaseModel):
 class UpdateModelVersionRequest(BaseModel):
     runtime: str | None = None
     artifact_uri: str | None = None
+    artifact_sha256: str | None = None
     class_path: str | None = None
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None

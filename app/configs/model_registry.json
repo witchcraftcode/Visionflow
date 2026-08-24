@@ -5,7 +5,8 @@
       "versions": {
         "1.0.0": {
           "runtime": "onnx",
-          "artifact_uri": "app/models/onnx/resnet18.onnx",
+          "artifact_uri": "s3://visionflow-model-artifacts/resnet18/v1/resnet18.onnx",
+          "artifact_sha256": "eef70310eb26bdbc70babb290ee3239599ea9aed406bade711e3d2693b9d20e8",
           "class": "app.models.resnet18.ResNet18Model",
           "input_schema": {
             "type": "image",
@@ -34,7 +35,8 @@
       "versions": {
         "1.0.0": {
           "runtime": "onnx",
-          "artifact_uri": "app/models/onnx/mobilenet_v2.onnx",
+          "artifact_uri": "s3://visionflow-model-artifacts/mobilenet/v1/mobilenet_v2.onnx",
+          "artifact_sha256": "fbfdd0ff7c3404264a44644a8d134e5a488e97a926beffb64c774cc534f90681",
           "class": "app.models.mobilenet.MobileNetV2Model",
           "input_schema": {
             "type": "image",
@@ -63,7 +65,8 @@
       "versions": {
         "1.0.0": {
           "runtime": "onnx",
-          "artifact_uri": "app/models/onnx/yolov5n.onnx",
+          "artifact_uri": "s3://visionflow-model-artifacts/yolov5/v1/yolov5n.onnx",
+          "artifact_sha256": "c632694c79e81c09d8bbf6aba497e59ba78be2f1d385ade3add89b7f21977d66",
           "class": "app.models.yolov5.YOLOv5Model",
           "input_schema": {
             "type": "image",

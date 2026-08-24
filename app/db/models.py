@@ -42,6 +42,7 @@ class ModelVersion(Base):
     version: Mapped[str] = mapped_column(String(64), nullable=False)
     runtime: Mapped[str] = mapped_column(String(64), nullable=False)
     artifact_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    artifact_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     class_path: Mapped[str] = mapped_column(Text, nullable=False)
     input_schema: Mapped[dict] = mapped_column(MutableDict.as_mutable(json_type), default=dict, nullable=False)
     output_schema: Mapped[dict] = mapped_column(MutableDict.as_mutable(json_type), default=dict, nullable=False)

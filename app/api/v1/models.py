@@ -67,6 +67,7 @@ def register_model(request: Request, payload: RegisterModelVersionRequest):
     registry_payload = {
         "runtime": payload.runtime,
         "artifact_uri": payload.artifact_uri,
+        "artifact_sha256": payload.artifact_sha256,
         "class": payload.class_path,
         "input_schema": payload.input_schema,
         "output_schema": payload.output_schema,
@@ -107,6 +108,7 @@ def update_model_version(
     registry_payload = {
         "runtime": payload.runtime,
         "artifact_uri": payload.artifact_uri,
+        "artifact_sha256": payload.artifact_sha256,
         "class": payload.class_path,
         "input_schema": payload.input_schema,
         "output_schema": payload.output_schema,

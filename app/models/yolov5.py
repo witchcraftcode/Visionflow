@@ -4,8 +4,8 @@ from pathlib import Path
 
 
 class YOLOv5Model:
-    def __init__(self, providers: list[str] | None = None):
-        model_path = Path(__file__).parent / "onnx" / "yolov5n.onnx"
+    def __init__(self, model_path: str | None = None, providers: list[str] | None = None):
+        model_path = Path(model_path) if model_path else Path(__file__).parent / "onnx" / "yolov5n.onnx"
         if not model_path.exists():
             raise FileNotFoundError(f"Missing model file: {model_path}")
         self.session = ort.InferenceSession(str(model_path), providers=providers)
