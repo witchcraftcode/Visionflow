@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -48,6 +48,17 @@ class ModelVersion(Base):
     output_schema: Mapped[dict] = mapped_column(MutableDict.as_mutable(json_type), default=dict, nullable=False)
     resources: Mapped[dict] = mapped_column(MutableDict.as_mutable(json_type), default=dict, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    traffic_percentage: Mapped[float] = mapped_column(
+        Float,
+        default=100.0,
+        nullable=False,
+    )
+
+    deployment_strategy: Mapped[str] = mapped_column(
+        String(32),
+        default="stable",
+        nullable=False,
+    )   
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
@@ -71,7 +82,20 @@ class JobRecord(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    queue_latency_ms: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
 
+    inference_latency_ms: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    total_latency_ms: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
 
 class Deployment(Base):
     __tablename__ = "deployments"
@@ -81,8 +105,37 @@ class Deployment(Base):
     model_version_id: Mapped[int] = mapped_column(ForeignKey("model_versions.id"), nullable=False, index=True)
     environment: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(64), nullable=False)
+    rollout_percentage: Mapped[float] = mapped_column(
+        Float,
+        default=100.0,
+        nullable=False,
+    )
+
+    deployed_by: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
     config: Mapped[dict] = mapped_column(MutableDict.as_mutable(json_type), default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     model_version: Mapped[ModelVersion] = relationship(back_populates="deployments")
+
+
+Index(
+    "idx_jobs_status_created",
+    JobRecord.status,
+    JobRecord.created_at,
+)
+
+Index(
+    "idx_jobs_model_version",
+    JobRecord.model_name,
+    JobRecord.model_version,
+)
+
+Index(
+    "idx_model_versions_active",
+    ModelVersion.model_id,
+    ModelVersion.is_active,
+)

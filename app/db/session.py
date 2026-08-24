@@ -14,7 +14,15 @@ def _engine_kwargs(database_url: str):
     return {"pool_pre_ping": True}
 
 
-engine = create_engine(settings.database_url, future=True, **_engine_kwargs(settings.database_url))
+engine = create_engine(
+    settings.database_url,
+    future=True,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    pool_size=10,
+    max_overflow=20,
+    **_engine_kwargs(settings.database_url),
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False, future=True)
 
 
@@ -25,3 +33,21 @@ def get_session() -> Iterator[Session]:
 
 def is_sqlite() -> bool:
     return engine.url.drivername.startswith("sqlite")
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def session_scope():
+    session = SessionLocal()
+
+    try:
+        yield session
+        session.commit()
+
+    except Exception:
+        session.rollback()
+        raise
+
+    finally:
+        session.close()
