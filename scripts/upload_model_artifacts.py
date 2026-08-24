@@ -12,8 +12,8 @@ from botocore.exceptions import ClientError
 
 from app.core.config import settings
 from app.storage.artifacts import sha256_file
+from app.services.registry_db import register_model_version
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACTS = {
     "resnet18/v1/resnet18.onnx": ROOT_DIR / "app" / "models" / "onnx" / "resnet18.onnx",
     "mobilenet/v1/mobilenet_v2.onnx": ROOT_DIR / "app" / "models" / "onnx" / "mobilenet_v2.onnx",
@@ -36,13 +36,24 @@ def ensure_bucket(s3_client, bucket: str, region: str):
     s3_client.create_bucket(**kwargs)
 
 
-def upload_artifact(s3_client, bucket: str, key: str, path: Path, dry_run: bool):
+def upload_artifact(
+    s3_client,
+    bucket,
+    key,
+    path,
+    dry_run,
+):
     if not path.exists():
         raise FileNotFoundError(f"Missing model artifact: {path}")
+
     checksum = sha256_file(path)
-    print(f"{path} -> s3://{bucket}/{key} sha256={checksum}")
+    uri = f"s3://{bucket}/{key}"
+
+    print(f"{path} -> {uri} sha256={checksum}")
+
     if dry_run:
-        return checksum
+        return checksum, uri
+
     s3_client.upload_file(
         str(path),
         bucket,
@@ -52,7 +63,8 @@ def upload_artifact(s3_client, bucket: str, key: str, path: Path, dry_run: bool)
             "ContentType": "application/octet-stream",
         },
     )
-    return checksum
+
+    return checksum, uri
 
 
 def parse_args():
@@ -89,8 +101,39 @@ def main():
         ensure_bucket(s3_client, args.bucket, args.region)
 
     for key, path in DEFAULT_ARTIFACTS.items():
-        upload_artifact(s3_client, args.bucket, key, path, args.dry_run)
+        checksum, uri = upload_artifact(
+            s3_client,
+            args.bucket,
+            key,
+            path,
+            args.dry_run,
+        )
 
+        if not args.dry_run:
+
+            model_name, version, _ = key.split("/", 2)
+
+            CLASS_PATHS = {
+                "resnet18": "app.models.resnet18.ResNet18Model",
+                "mobilenet": "app.models.mobilenet.MobileNetV2Model",
+                "yolov5": "app.models.yolov5.YOLOv5Model",
+            }
+
+            register_model_version(
+                model_name=model_name,
+                version=version,
+                payload={
+                    "runtime": "onnxruntime",
+                    "artifact_uri": uri,
+                    "artifact_sha256": checksum,
+                    "class": CLASS_PATHS[model_name],
+                    "input_schema": {},
+                    "output_schema": {},
+                    "resources": {},
+                },
+            )
+
+            print(f"Registered {model_name}:{version}")
 
 if __name__ == "__main__":
     main()
