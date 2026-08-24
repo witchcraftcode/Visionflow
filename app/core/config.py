@@ -15,9 +15,33 @@ class Settings(BaseModel):
     admin_paths: set[str] = {"/models/register", "/admin/audit"}
     configs_dir: Path = Path(__file__).resolve().parents[1] / "configs" / "models"
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./visionflow.db")
+    aws_region: str = os.getenv(
+        "AWS_REGION",
+        "ap-south-1",
+    )
+
+    aws_access_key_id: str | None = os.getenv(
+        "AWS_ACCESS_KEY_ID",
+    )
+
+    aws_secret_access_key: str | None = os.getenv(
+        "AWS_SECRET_ACCESS_KEY",
+    )
+
+    s3_bucket: str = os.getenv(
+        "S3_BUCKET",
+        "visionflow-models",
+    )
+
+    model_cache_dir: Path = Path(
+        os.getenv(
+            "MODEL_CACHE_DIR",
+            "./model_cache",
+        )
+    )
     auto_create_sqlite_schema: bool = os.getenv("AUTO_CREATE_SQLITE_SCHEMA", "true").lower() == "true"
-    model_artifact_bucket: str = os.getenv("MODEL_ARTIFACT_BUCKET", "visionflow-model-artifacts")
-    model_cache_dir: Path = Path(os.getenv("MODEL_CACHE_DIR", "/tmp/visionflow-model-cache"))
+ 
+
 
 
 settings = Settings()

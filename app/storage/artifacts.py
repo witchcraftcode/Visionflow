@@ -72,7 +72,20 @@ class ModelArtifactManager:
         if self.s3_client is None:
             import boto3
 
-            self.s3_client = boto3.client("s3")
+            kwargs = {
+                "region_name": settings.aws_region,
+            }
+
+            if settings.aws_access_key_id:
+                kwargs["aws_access_key_id"] = settings.aws_access_key_id
+
+            if settings.aws_secret_access_key:
+                kwargs["aws_secret_access_key"] = (
+                    settings.aws_secret_access_key
+                )
+
+            self.s3_client = boto3.client("s3", **kwargs)
+
         return self.s3_client
 
 

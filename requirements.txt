@@ -11,4 +11,4 @@ httpx
 SQLAlchemy
 alembic
 psycopg2-binary
-boto3
+boto3==1.40.11
