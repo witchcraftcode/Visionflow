@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
+
 import argparse
+import sys
 from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 
 import boto3
 from botocore.exceptions import ClientError
@@ -52,8 +57,14 @@ def upload_artifact(s3_client, bucket: str, key: str, path: Path, dry_run: bool)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Upload VisionFlow model artifacts to S3.")
-    parser.add_argument("--bucket", default=settings.model_artifact_bucket)
-    parser.add_argument("--region", default="us-east-1")
+    parser.add_argument(
+        "--bucket",
+        default=settings.s3_bucket,
+    )
+    parser.add_argument(
+        "--region",
+        default=settings.aws_region,
+    )
     parser.add_argument("--no-create-bucket", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
@@ -61,7 +72,19 @@ def parse_args():
 
 def main():
     args = parse_args()
-    s3_client = boto3.client("s3", region_name=args.region)
+    kwargs = {
+        "region_name": args.region,
+    }
+
+    if settings.aws_access_key_id:
+        kwargs["aws_access_key_id"] = settings.aws_access_key_id
+
+    if settings.aws_secret_access_key:
+        kwargs["aws_secret_access_key"] = (
+            settings.aws_secret_access_key
+        )
+
+    s3_client = boto3.client("s3", **kwargs)
     if not args.no_create_bucket and not args.dry_run:
         ensure_bucket(s3_client, args.bucket, args.region)
 
