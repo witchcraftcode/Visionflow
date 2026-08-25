@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: visionflow-api
+  namespace: visionflow
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+
+spec:
+  selector:
+    app: visionflow-api
+
+  ports:
+    - port: 80
+      targetPort: 8000
+
+  type: LoadBalancer

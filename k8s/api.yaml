@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visionflow-api
+  namespace: visionflow
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: visionflow-api
+
+  template:
+    metadata:
+      labels:
+        app: visionflow-api
+
+    spec:
+      containers:
+        - name: visionflow-api
+          image: 320698389216.dkr.ecr.ap-southeast-2.amazonaws.com/visionflow-api:latest
+
+          env:
+            - name: ENV
+              value: "production"
+
+            - name: REDIS_HOST
+              value: redis
+
+            - name: REDIS_PORT
+              value: "6379"
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visionflow-api
+  namespace: visionflow
+
+spec:
+  selector:
+    app: visionflow-api
+
+  ports:
+    - port: 80
+      targetPort: 8000
+
+  type: LoadBalancer

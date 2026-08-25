@@ -7,13 +7,24 @@ from app.core.config import settings
 from app.core.middleware import add_exception_handlers, add_middleware, trace_id_from_request
 from app.services import queue, registry
 
+import os
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name)
+    is_production = os.getenv("ENV") == "production"
+
+    app = FastAPI(
+        title=settings.app_name,
+        docs_url=None if is_production else "/docs",
+        redoc_url=None if is_production else "/redoc",
+        openapi_url=None if is_production else "/openapi.json",
+    )
+
     add_exception_handlers(app)
     add_middleware(app)
+
     app.include_router(api_router)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+
     return app
 
 
