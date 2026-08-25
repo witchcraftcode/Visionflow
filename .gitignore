@@ -12,3 +12,5 @@ import
 app.models.onnx_model
 ONNXVisionModel
 app/models/onnx/*.pt
+.env
+global-bundle.pem

@@ -12,3 +12,4 @@ SQLAlchemy
 alembic
 psycopg2-binary
 boto3==1.40.11
+python-dotenv==1.1.1
