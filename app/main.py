@@ -19,6 +19,17 @@ def create_app() -> FastAPI:
         openapi_url=None if is_production else "/openapi.json",
     )
 
+    @app.get("/", include_in_schema=False)
+    def home():
+        return {
+            "project": "VisionFlow",
+            "status": "live",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "health": "/health",
+            "metrics": "/metrics"
+        }
+
     add_exception_handlers(app)
     add_middleware(app)
 
@@ -51,3 +62,4 @@ model_metadata = registry.model_metadata
 promote_model_version = registry.promote_model_version
 register_model_version = registry.register_model_version
 resolve_model_version = registry.resolve_model_version
+
