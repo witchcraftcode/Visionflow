@@ -1,6 +1,9 @@
 import time
 import traceback
 
+import redis
+
+from app.services.queue import queue_service
 from app.core.config import load_model_config
 from app.models.adapter import VisionModelAdapter
 from app.models.registry import get_model
@@ -107,6 +110,11 @@ def maybe_recover_stale_jobs():
 
 def process_one_job():
     job_id = queue_service.dequeue()
+
+    # Redis BLPOP timed out → no job available
+    if job_id is None:
+        return
+
     job = queue_service.get_job(job_id)
     active_job = job
 
@@ -201,6 +209,14 @@ def process_one_job():
 
 
 def run_worker_forever():
+    print("[worker] started, waiting for jobs...", flush=True)
+
     while True:
-        maybe_recover_stale_jobs()
-        process_one_job()
+        try:
+            process_one_job()
+        except redis.exceptions.TimeoutError:
+            continue
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            continue
