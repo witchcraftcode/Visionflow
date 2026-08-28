@@ -111,13 +111,14 @@ def maybe_recover_stale_jobs():
 def process_one_job():
     job_id = queue_service.dequeue()
 
-    # Redis BLPOP timed out → no job available
+    # Queue is empty → nothing to process
     if job_id is None:
         return
 
     job = queue_service.get_job(job_id)
     active_job = job
 
+    # Job ID exists in queue but metadata is missing
     if job is None:
         print(f"[worker] missing job: {job_id}", flush=True)
         return
