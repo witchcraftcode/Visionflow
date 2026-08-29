@@ -23,7 +23,7 @@ export default function StatsGrid() {
         };
 
         setStats({
-          healthy: h.status === "healthy" ? "Online" : "Offline",
+          healthy: h.status === "ok" ? "Online" : "Offline",
           requests: extract("visionflow_jobs_total"),
           latency: `${extract("visionflow_inference_duration_ms")} ms`,
           queue: extract("visionflow_queue_depth"),
