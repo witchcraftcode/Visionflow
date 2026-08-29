@@ -1,4 +1,4 @@
-import { GitHub, FileText, Activity } from "lucide-react";
+import { FileText, Activity } from "lucide-react";
 import { API_BASE } from "../api";
 
 export default function Navbar() {
@@ -22,7 +22,6 @@ export default function Navbar() {
           target="_blank"
           rel="noreferrer"
         >
-          <GitHub size={16} />
           GitHub
         </a>
       </div>
