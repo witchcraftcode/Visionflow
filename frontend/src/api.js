@@ -1,20 +1,17 @@
 import axios from "axios";
 
-export const API_BASE =
-  (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api/v1";
+// Same Vercel deployment serves both the frontend and /api/* — no separate
+// backend URL or CORS config needed for the default setup.
+export const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 60000,
-  headers: {
-    "X-API-Key": "visionflow-demo-key",
-  },
 });
 
 export const health = async () => (await api.get("/health")).data;
 
-export const metrics = async () =>
-  (await api.get("/metrics", { responseType: "text" })).data;
+export const metrics = async () => (await api.get("/metrics")).data;
 
 export const predict = async (file, model) => {
   const form = new FormData();
@@ -22,10 +19,3 @@ export const predict = async (file, model) => {
   form.append("model", model);
   return (await api.post("/predict", form)).data;
 };
-
-export const getJob = async (id) => (await api.get(`/jobs/${id}`)).data;
-
-export function parseMetric(text, name) {
-  const match = text.match(new RegExp(`${name}[^\\n]*?([0-9.]+)`));
-  return match ? match[1] : "0";
-}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { predict, getJob } from "./api";
+import { predict } from "./api";
 
 import Navbar from "./components/Navbar";
 import StatsGrid from "./components/StatsGrid";
@@ -26,36 +26,15 @@ export default function App() {
 
     setResult(null);
     setLatency(null);
-    setStatus("Uploading");
+    setStatus("Running");
 
     try {
-      const start = performance.now();
+      const response = await predict(file, selectedModel);
 
-      const job = await predict(file, selectedModel);
-
-      setJobId(job.job_id);
-      setStatus("Queued");
-
-      const timer = setInterval(async () => {
-        const data = await getJob(job.job_id);
-
-        if (data.status === "processing") {
-          setStatus("Processing");
-        }
-
-        if (data.status === "completed") {
-          clearInterval(timer);
-
-          setLatency(Math.round(performance.now() - start));
-          setResult(data.result);
-          setStatus("Completed");
-        }
-
-        if (data.status === "dead_lettered") {
-          clearInterval(timer);
-          setStatus("Failed");
-        }
-      }, 1000);
+      setJobId(response.job_id);
+      setLatency(response.latency_ms);
+      setResult(response.result);
+      setStatus("Completed");
     } catch (err) {
       console.error(err);
       setStatus("Error");

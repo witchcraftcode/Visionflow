@@ -80,8 +80,9 @@ export default function Architecture() {
           <h3>Asynchronous Inference</h3>
 
           <p>
-            Images are uploaded to FastAPI, queued in Redis, processed by ONNX
-            workers, and stored with metadata in PostgreSQL.
+            The full project queues images in Redis and processes them on a
+            separate ONNX worker, with metadata stored in PostgreSQL — see the
+            diagram above.
           </p>
         </div>
 
@@ -96,6 +97,18 @@ export default function Architecture() {
             <li>ONNX Runtime</li>
             <li>Prometheus Metrics</li>
           </ul>
+        </div>
+
+        <div className="info-card">
+          <h3>This Live Demo</h3>
+
+          <p>
+            Runs on Vercel only, with no card required: the frontend is a
+            static build, and prediction runs as one Python serverless
+            function that loads the ONNX model and returns a result directly
+            — no Redis, worker, or database. Same models, same preprocessing,
+            simpler request path.
+          </p>
         </div>
       </div>
     </div>

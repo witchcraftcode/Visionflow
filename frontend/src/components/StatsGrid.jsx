@@ -6,7 +6,6 @@ export default function StatsGrid() {
     status: "Loading",
     requests: "0",
     latency: "--",
-    queue: "0",
   });
 
   useEffect(() => {
@@ -15,26 +14,16 @@ export default function StatsGrid() {
         const h = await health();
         const m = await metrics();
 
-        const get = (name) => {
-          const r = new RegExp(`${name}[^\\n]* ([0-9.]+)`);
-          const match = m.match(r);
-          return match ? match[1] : "0";
-        };
-
         setStats({
           status: h.status === "ok" ? "Online" : "Offline",
-          requests: get("visionflow_http_requests_total"),
-          latency: Number(
-            get("visionflow_http_request_latency_seconds_avg") * 1000
-          ).toFixed(1),
-          queue: get("visionflow_queue_depth"),
+          requests: String(m.requests_total ?? 0),
+          latency: Number(m.avg_latency_ms ?? 0).toFixed(1),
         });
       } catch {
         setStats({
           status: "Offline",
           requests: "0",
           latency: "--",
-          queue: "0",
         });
       }
     };
@@ -46,9 +35,9 @@ export default function StatsGrid() {
 
   const cards = [
     ["System Status", stats.status],
-    ["HTTP Requests", stats.requests],
+    ["Requests (this instance)", stats.requests],
     ["Avg Latency", `${stats.latency} ms`],
-    ["Queue Depth", stats.queue],
+    ["Deployment", "Vercel Serverless"],
   ];
 
   return (
