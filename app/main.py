@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app import security
 from app.api.v1.router import api_router
@@ -19,6 +20,14 @@ def create_app() -> FastAPI:
         openapi_url=None if is_production else "/openapi.json",
     )
 
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],      # Replace with your Vercel URL later
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     @app.get("/", include_in_schema=False)
     def home():
         return {
@@ -27,7 +36,7 @@ def create_app() -> FastAPI:
             "version": "1.0.0",
             "docs": "/docs",
             "health": "/health",
-            "metrics": "/metrics"
+            "metrics": "/metrics",
         }
 
     add_exception_handlers(app)

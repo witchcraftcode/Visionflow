@@ -1,60 +1,105 @@
 import { useState } from "react";
 import { predict, getJob } from "./api";
+import Navbar from "./components/Navbar";
+import StatsGrid from "./components/StatsGrid";
+import ModelSelector from "./components/ModelSelector";
 import "./App.css";
+import UploadCard from "./components/UploadCard";
+import PredictionCard from "./components/PredictionCard";
+import Architecture from "./components/Architecture";
 
 export default function App() {
   const [file, setFile] = useState(null);
-  const [status, setStatus] = useState("");
+  const [selectedModel, setSelectedModel] = useState("resnet18");
+  const [status, setStatus] = useState("Idle");
   const [result, setResult] = useState(null);
+  const [jobId, setJobId] = useState(null);
 
   async function handlePredict() {
-    if (!file) return;
+    if (!file) {
+      alert("Please select an image first.");
+      return;
+    }
 
     setStatus("Uploading...");
     setResult(null);
 
-    const job = await predict(file);
+    try {
+      const job = await predict(file, selectedModel);
 
-    setStatus("Processing...");
+      setJobId(job.job_id);
+      setStatus("Processing...");
 
-    const timer = setInterval(async () => {
-      const data = await getJob(job.job_id);
+      const timer = setInterval(async () => {
+        const data = await getJob(job.job_id);
 
-      if (data.status === "completed") {
-        clearInterval(timer);
-        setStatus("Completed");
-        setResult(data.result);
-      }
+        if (data.status === "completed") {
+          clearInterval(timer);
+          setStatus("Completed");
+          setResult(data.result);
+        }
 
-      if (data.status === "dead_lettered") {
-        clearInterval(timer);
-        setStatus("Failed");
-      }
-    }, 1000);
+        if (data.status === "dead_lettered") {
+          clearInterval(timer);
+          setStatus("Failed");
+        }
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setStatus("Error");
+    }
   }
 
   return (
-    <div className="container">
-      <h1>VisionFlow</h1>
-      <p>Cloud-native ML Vision Inference Platform</p>
+    <div className="app">
+      <Navbar />
 
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setFile(e.target.files[0])}
-      />
+      <main className="container">
+        <StatsGrid />
 
-      <button onClick={handlePredict}>Predict</button>
+        <section className="hero">
+          <h1>VisionFlow</h1>
+          <p>Cloud-native ML Vision Inference Platform</p>
+        </section>
 
-      <h3>{status}</h3>
+        <ModelSelector
+          selected={selectedModel}
+          setSelected={setSelectedModel}
+        />
 
-      {result && (
-        <div className="card">
-          <h2>Prediction</h2>
-          <p>Label: {result.label}</p>
-          <p>Confidence: {result.confidence.toFixed(2)}%</p>
-        </div>
-      )}
+        <UploadCard
+          file={file}
+          setFile={setFile}
+          onPredict={handlePredict}
+        />
+
+        <section className="status-card">
+          <h2>Inference Status</h2>
+
+          <p>
+            <strong>Status:</strong> {status}
+          </p>
+
+          <p>
+            <strong>Model:</strong> {selectedModel}
+          </p>
+
+          {jobId && (
+            <p>
+              <strong>Job ID:</strong> {jobId}
+            </p>
+          )}
+        </section>
+
+        <PredictionCard
+          result={result}
+          model={selectedModel}
+          status={status}
+          jobId={jobId}
+        />  
+
+        <Architecture />
+      </main>
     </div>
   );
 }
