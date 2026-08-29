@@ -28,4 +28,12 @@ export const health = async () => {
   return data;
 };
 
+// ADD THIS
+export const metrics = async () => {
+  const { data } = await api.get("/metrics", {
+    responseType: "text",
+  });
+  return data;
+};
+
 export const API_BASE = API_URL;
