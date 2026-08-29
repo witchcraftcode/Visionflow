@@ -1,90 +1,62 @@
 import { useEffect, useState } from "react";
-import { health, metrics, parseMetric } from "../api";
-import {
-  Activity,
-  Gauge,
-  Database,
-  CheckCircle,
-} from "lucide-react";
+import { health, metrics } from "../api";
 
 export default function StatsGrid() {
   const [stats, setStats] = useState({
-    online: "Checking",
-    jobs: "0",
-    latency: "0",
+    status: "Loading",
+    requests: "0",
+    latency: "--",
     queue: "0",
   });
 
-  async function loadStats() {
-    try {
-      const h = await health();
-      const m = await metrics();
-
-      setStats({
-        online: h.status === "ok" ? "Online" : "Offline",
-        jobs: parseMetric(m, "visionflow_jobs_total"),
-        latency: parseMetric(
-          m,
-          "visionflow_inference_duration_ms"
-        ),
-        queue: parseMetric(m, "visionflow_queue_depth"),
-      });
-    } catch (e) {
-      setStats({
-        online: "Offline",
-        jobs: "0",
-        latency: "0",
-        queue: "0",
-      });
-    }
-  }
-
   useEffect(() => {
-    loadStats();
+    const load = async () => {
+      try {
+        const h = await health();
+        const m = await metrics();
 
-    const timer = setInterval(loadStats, 5000);
+        const get = (name) => {
+          const r = new RegExp(`${name}[^\\n]* ([0-9.]+)`);
+          const match = m.match(r);
+          return match ? match[1] : "0";
+        };
 
-    return () => clearInterval(timer);
+        setStats({
+          status: h.status === "ok" ? "Online" : "Offline",
+          requests: get("visionflow_http_requests_total"),
+          latency: Number(
+            get("visionflow_http_request_latency_seconds_avg") * 1000
+          ).toFixed(1),
+          queue: get("visionflow_queue_depth"),
+        });
+      } catch {
+        setStats({
+          status: "Offline",
+          requests: "0",
+          latency: "--",
+          queue: "0",
+        });
+      }
+    };
+
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
   }, []);
 
   const cards = [
-    {
-      title: "System Status",
-      value: stats.online,
-      sub: "FastAPI Health",
-      icon: <CheckCircle size={26} />,
-    },
-    {
-      title: "Completed Jobs",
-      value: stats.jobs,
-      sub: "Prometheus Counter",
-      icon: <Database size={26} />,
-    },
-    {
-      title: "Latest Latency",
-      value: `${stats.latency} ms`,
-      sub: "Worker Inference",
-      icon: <Gauge size={26} />,
-    },
-    {
-      title: "Queue Depth",
-      value: stats.queue,
-      sub: "Redis Waiting Jobs",
-      icon: <Activity size={26} />,
-    },
+    ["System Status", stats.status],
+    ["HTTP Requests", stats.requests],
+    ["Avg Latency", `${stats.latency} ms`],
+    ["Queue Depth", stats.queue],
   ];
 
   return (
     <section className="stats-grid">
-      {cards.map((card) => (
-        <div className="stat-card" key={card.title}>
-          <div className="stat-icon">{card.icon}</div>
-
-          <p>{card.title}</p>
-
-          <h2>{card.value}</h2>
-
-          <span>{card.sub}</span>
+      {cards.map(([title, value]) => (
+        <div className="stat-card" key={title}>
+          <p>{title}</p>
+          <h2>{value}</h2>
         </div>
       ))}
     </section>

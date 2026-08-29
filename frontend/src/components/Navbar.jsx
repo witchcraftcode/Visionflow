@@ -1,4 +1,4 @@
-import { FileText, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { API_BASE } from "../api";
 
 export default function Navbar() {
@@ -7,13 +7,8 @@ export default function Navbar() {
       <div className="logo">VisionFlow</div>
 
       <div className="nav-links">
-        <a href={`${API_BASE}/docs`} target="_blank" rel="noreferrer">
-          <FileText size={16} />
-          Docs
-        </a>
-
         <a href={`${API_BASE}/metrics`} target="_blank" rel="noreferrer">
-          <Activity size={16} />
+          <Activity size={16}/>
           Metrics
         </a>
 
