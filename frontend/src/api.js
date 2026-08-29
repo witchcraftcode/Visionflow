@@ -1,9 +1,31 @@
 import axios from "axios";
 
-export const API_BASE_URL = (
+const FALLBACK_API_URL =
+  "http://a6126bb5e30104b1689ab6e198168212-1203948690.ap-southeast-2.elb.amazonaws.com/api/v1";
+
+function ensureApiPrefix(url) {
+  const trimmed = url.replace(/\/$/, "");
+  return /\/api\/v1$/.test(trimmed) ? trimmed : `${trimmed}/api/v1`;
+}
+
+function resolveApiBaseUrl() {
+  const configuredUrl = ensureApiPrefix(
   import.meta.env.VITE_API_URL ||
-  "http://a6126bb5e30104b1689ab6e198168212-1203948690.ap-southeast-2.elb.amazonaws.com/api/v1"
-).replace(/\/$/, "");
+      FALLBACK_API_URL,
+  );
+
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    configuredUrl.startsWith("http://")
+  ) {
+    return "/api/v1";
+  }
+
+  return configuredUrl;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -30,9 +52,7 @@ export async function runPrediction(file, model) {
   form.append("file", file);
   form.append("model", model);
 
-  const response = await api.post("/predict", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await api.post("/predict", form);
   return response.data;
 }
 
