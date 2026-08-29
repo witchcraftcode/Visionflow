@@ -22,7 +22,11 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],      # Replace with your Vercel URL later
+        allow_origins=[
+            "https://visionflow-phi.vercel.app",
+            "https://visionflow-bgnnc4lb4-witchcraftcode.vercel.app",
+            "http://localhost:5173",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
