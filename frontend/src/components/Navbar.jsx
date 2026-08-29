@@ -1,18 +1,17 @@
+import { API_BASE } from "../api";
+
 export default function Navbar() {
   return (
-    <nav className="navbar">
-      <div className="brand">
+    <nav className="nav">
+      <div>
         <h2>VisionFlow</h2>
-        <span>Cloud Vision Inference Platform</span>
+        <p>Cloud Vision Inference Platform</p>
       </div>
 
-      <div className="nav-links">
-        <a href="/docs" target="_blank">Docs</a>
-        <a href="/metrics" target="_blank">Metrics</a>
-        <a
-          href="https://github.com/witchcraftcode/Visionflow"
-          target="_blank"
-        >
+      <div className="links">
+        <a href={`${API_BASE}/docs`} target="_blank" rel="noreferrer">Docs</a>
+        <a href={`${API_BASE}/metrics`} target="_blank" rel="noreferrer">Metrics</a>
+        <a href="https://github.com/witchcraftcode/Visionflow" target="_blank" rel="noreferrer">
           GitHub
         </a>
       </div>

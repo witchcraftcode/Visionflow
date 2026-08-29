@@ -1,14 +1,15 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-  baseURL:
-    "http://a6126bb5e30104b1689ab6e198168212-1203948690.ap-southeast-2.elb.amazonaws.com",
+  baseURL: API_URL,
   headers: {
     "X-API-Key": "visionflow-demo-key",
   },
 });
 
-export const predict = async (file, model = "resnet18") => {
+export const predict = async (file, model) => {
   const form = new FormData();
   form.append("file", file);
   form.append("model", model);
@@ -27,7 +28,4 @@ export const health = async () => {
   return data;
 };
 
-export const metrics = async () => {
-  const { data } = await api.get("/metrics");
-  return data;
-};
+export const API_BASE = API_URL;
