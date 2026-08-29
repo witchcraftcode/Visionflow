@@ -1,39 +1,23 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL;
+export const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  "http://a6126bb5e30104b1689ab6e198168212-1203948690.ap-southeast-2.elb.amazonaws.com";
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE,
   headers: {
     "X-API-Key": "visionflow-demo-key",
   },
 });
 
+export const health = async () => (await api.get("/health")).data;
+export const metrics = async () =>
+  (await api.get("/metrics", { responseType: "text" })).data;
 export const predict = async (file, model) => {
   const form = new FormData();
   form.append("file", file);
   form.append("model", model);
-
-  const { data } = await api.post("/predict", form);
-  return data;
+  return (await api.post("/predict", form)).data;
 };
-
-export const getJob = async (jobId) => {
-  const { data } = await api.get(`/jobs/${jobId}`);
-  return data;
-};
-
-export const health = async () => {
-  const { data } = await api.get("/health");
-  return data;
-};
-
-// ADD THIS
-export const metrics = async () => {
-  const { data } = await api.get("/metrics", {
-    responseType: "text",
-  });
-  return data;
-};
-
-export const API_BASE = API_URL;
+export const getJob = async (id) => (await api.get(`/jobs/${id}`)).data;
