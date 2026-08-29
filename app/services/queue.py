@@ -241,3 +241,24 @@ __all__ = [
     "SQSQueue",
     "queue_service",
 ]
+
+import json
+import redis
+
+r = redis.Redis(host="redis", port=6379, decode_responses=True)
+
+def get_all_jobs():
+    jobs = []
+
+    for key in r.scan_iter("job:*"):
+        data = r.get(key)
+
+        if data:
+            jobs.append(json.loads(data))
+
+    jobs.sort(
+        key=lambda x: x.get("created_at", ""),
+        reverse=True,
+    )
+
+    return jobs

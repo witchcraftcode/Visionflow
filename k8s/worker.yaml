@@ -22,11 +22,40 @@ spec:
           image: 320698389216.dkr.ecr.ap-southeast-2.amazonaws.com/visionflow-worker:latest
           imagePullPolicy: Always
 
+          command: ["python"]
+          args: ["-m", "app.worker_runner"]
+
           env:
             - name: REDIS_HOST
               value: redis
             - name: REDIS_PORT
               value: "6379"
+
+            - name: DATABASE_URL
+              value: "postgresql://visionflow_admin:wYpcaz-vodjux-novfe3@visionflow-db.cxuqq8266c0c.ap-southeast-2.rds.amazonaws.com:5432/postgres"
+
+            - name: AWS_DEFAULT_REGION
+              value: ap-southeast-2
+            - name: MODEL_ARTIFACT_BUCKET
+              value: visionflow-models
+
+            - name: S3_BUCKET
+              value: visionflow-models
+
+            - name: MODEL_ARTIFACT_BUCKET
+              value: visionflow-models
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key-id
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-access-key
 
           resources:
             requests:

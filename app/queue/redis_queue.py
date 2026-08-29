@@ -11,11 +11,13 @@ RATE_LIMIT_PREFIX = "ratelimit"
 redis_client = redis.Redis(
     host=REDIS_HOST,
     port=REDIS_PORT,
-    db=0,
-    decode_responses=True
+    decode_responses=True,
+    socket_timeout=None,           
+    socket_connect_timeout=5,
 )
 
-QUEUE_NAME = "queue:jobs"
+
+QUEUE_NAME = "visionflow:jobs"
 DLQ_NAME = "queue:jobs:dlq"
 
 
@@ -29,9 +31,20 @@ def enqueue_dead_letter(job_id: str):
     redis_client.rpush(DLQ_NAME, job_id)
 
 
+
+
 def dequeue_job():
-    _, job_id = redis_client.blpop(QUEUE_NAME)
-    print("[dequeue_job] popped:", job_id)
+    item = redis_client.blpop(QUEUE_NAME, timeout=5)
+
+    if item is None:
+        return None
+
+    _, job_id = item
+
+    # Works for both bytes and str
+    if isinstance(job_id, bytes):
+        return job_id.decode("utf-8")
+
     return job_id
 
 

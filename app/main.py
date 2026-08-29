@@ -20,13 +20,24 @@ def create_app() -> FastAPI:
         openapi_url=None if is_production else "/openapi.json",
     )
 
+    default_origins = [
+        "https://visionflow-phi.vercel.app",
+        "https://visionflow-bgnnc4lb4-witchcraftcode.vercel.app",
+        "http://localhost:5173",
+    ]
+    extra_origins = [
+        o.strip()
+        for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+        if o.strip()
+    ]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "https://visionflow-phi.vercel.app",
-            "https://visionflow-bgnnc4lb4-witchcraftcode.vercel.app",
-            "http://localhost:5173",
-        ],
+        allow_origins=list(dict.fromkeys(default_origins + extra_origins)),
+        # Also allow any Vercel preview/production deployment of this project
+        # (e.g. visionflow-<hash>-<team>.vercel.app) without needing a redeploy
+        # every time Vercel mints a new preview URL.
+        allow_origin_regex=r"https://visionflow(-[a-z0-9]+)*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

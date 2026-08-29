@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 from app import security
 from app.core.config import settings
@@ -109,8 +110,18 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         log_event("http_request", method=request.method, path=request.url.path, status_code=response.status_code)
         return response
 
-
 def add_middleware(app: FastAPI):
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:3000",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["X-Trace-Id", "X-Request-ID"],
+    )
+
     app.add_middleware(RequestContextMiddleware)
 
 
