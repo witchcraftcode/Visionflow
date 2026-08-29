@@ -1,55 +1,66 @@
-import { useRef } from "react";
-import { Upload, Image } from "lucide-react";
+import { Upload, Image as ImageIcon, Play } from "lucide-react";
 
-export default function UploadCard({ file, setFile, onPredict }) {
-  const inputRef = useRef();
-
-  function handleDrop(e) {
-    e.preventDefault();
-    const dropped = e.dataTransfer.files[0];
-    if (dropped) setFile(dropped);
-  }
+export default function UploadCard({
+  file,
+  setFile,
+  selectedModel,
+  onPredict,
+  status,
+}) {
+  const preview = file ? URL.createObjectURL(file) : null;
 
   return (
-    <section className="upload-card">
-      <h2>Image Upload</h2>
+    <div className="upload-card">
+      <h2>Upload Image</h2>
 
-      <div
-        className="dropzone"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current.click()}
-      >
-        {file ? (
-          <>
-            <img
-              src={URL.createObjectURL(file)}
-              alt="preview"
-              className="preview"
-            />
-            <p>{file.name}</p>
-          </>
+      <label className="dropzone">
+        {preview ? (
+          <div className="file-preview">
+            <img src={preview} alt="preview" />
+          </div>
         ) : (
           <>
-            <Upload size={40} />
-            <h3>Drag & Drop</h3>
+            <Upload size={42} />
+            <h3>Drag & Drop Image</h3>
             <p>JPEG • PNG • WEBP</p>
+            <span className="upload-btn">Choose File</span>
           </>
         )}
 
         <input
-          ref={inputRef}
-          hidden
           type="file"
           accept="image/*"
           onChange={(e) => setFile(e.target.files[0])}
         />
+      </label>
+
+      {file && (
+        <div className="file-info">
+          <div className="file-name">
+            <ImageIcon size={18} />
+            <span>{file.name}</span>
+          </div>
+
+          <span>{(file.size / 1024).toFixed(1)} KB</span>
+        </div>
+      )}
+
+      <div className="upload-meta">
+        <div>
+          <p>Selected Model</p>
+          <h4>{selectedModel}</h4>
+        </div>
+
+        <div>
+          <p>Status</p>
+          <h4>{status}</h4>
+        </div>
       </div>
 
       <button className="predict-btn" onClick={onPredict}>
-        <Image size={18} />
+        <Play size={18} />
         Run Inference
       </button>
-    </section>
+    </div>
   );
 }

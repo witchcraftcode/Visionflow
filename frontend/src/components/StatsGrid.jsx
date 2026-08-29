@@ -1,78 +1,90 @@
 import { useEffect, useState } from "react";
-import { health, metrics } from "../api";
+import { health, metrics, parseMetric } from "../api";
+import {
+  Activity,
+  Gauge,
+  Database,
+  CheckCircle,
+} from "lucide-react";
 
 export default function StatsGrid() {
   const [stats, setStats] = useState({
-    healthy: "—",
-    requests: "—",
-    latency: "—",
-    queue: "—",
+    online: "Checking",
+    jobs: "0",
+    latency: "0",
+    queue: "0",
   });
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const h = await health();
-        const m = await metrics();
+  async function loadStats() {
+    try {
+      const h = await health();
+      const m = await metrics();
 
-        const text = typeof m === "string" ? m : JSON.stringify(m);
-
-        const extract = (name) => {
-          const match = text.match(new RegExp(`${name}.*?([0-9.]+)`));
-          return match ? match[1] : "0";
-        };
-
-        setStats({
-          healthy: h.status === "ok" ? "Online" : "Offline",
-          requests: extract("visionflow_jobs_total"),
-          latency: `${extract("visionflow_inference_duration_ms")} ms`,
-          queue: extract("visionflow_queue_depth"),
-        });
-      } catch {
-        setStats({
-          healthy: "Offline",
-          requests: "0",
-          latency: "—",
-          queue: "—",
-        });
-      }
+      setStats({
+        online: h.status === "ok" ? "Online" : "Offline",
+        jobs: parseMetric(m, "visionflow_jobs_total"),
+        latency: parseMetric(
+          m,
+          "visionflow_inference_duration_ms"
+        ),
+        queue: parseMetric(m, "visionflow_queue_depth"),
+      });
+    } catch (e) {
+      setStats({
+        online: "Offline",
+        jobs: "0",
+        latency: "0",
+        queue: "0",
+      });
     }
+  }
 
-    load();
-    const id = setInterval(load, 5000);
-    return () => clearInterval(id);
+  useEffect(() => {
+    loadStats();
+
+    const timer = setInterval(loadStats, 5000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const cards = [
     {
       title: "System Status",
-      value: stats.healthy,
-      sub: "Health endpoint",
+      value: stats.online,
+      sub: "FastAPI Health",
+      icon: <CheckCircle size={26} />,
     },
     {
       title: "Completed Jobs",
-      value: stats.requests,
-      sub: "Prometheus counter",
+      value: stats.jobs,
+      sub: "Prometheus Counter",
+      icon: <Database size={26} />,
     },
     {
       title: "Latest Latency",
-      value: stats.latency,
-      sub: "Worker inference time",
+      value: `${stats.latency} ms`,
+      sub: "Worker Inference",
+      icon: <Gauge size={26} />,
     },
     {
       title: "Queue Depth",
       value: stats.queue,
-      sub: "Redis waiting jobs",
+      sub: "Redis Waiting Jobs",
+      icon: <Activity size={26} />,
     },
   ];
 
   return (
     <section className="stats-grid">
-      {cards.map((c) => (
-        <div className="stat-card" key={c.title}>
-          <p>{c.title}</p>
-          <h2>{c.value}</h2>
-          <span>{c.sub}</span>
+      {cards.map((card) => (
+        <div className="stat-card" key={card.title}>
+          <div className="stat-icon">{card.icon}</div>
+
+          <p>{card.title}</p>
+
+          <h2>{card.value}</h2>
+
+          <span>{card.sub}</span>
         </div>
       ))}
     </section>

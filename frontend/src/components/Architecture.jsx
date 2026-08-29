@@ -1,72 +1,103 @@
 import {
   Globe,
-  Database,
+  Cloud,
   Server,
+  Database,
   Cpu,
-  HardDrive,
+  Workflow,
   ArrowRight,
 } from "lucide-react";
 
+const nodes = [
+  {
+    title: "Browser",
+    sub: "Vercel React",
+    icon: <Globe size={28} />,
+    color: "#2563eb",
+  },
+  {
+    title: "Load Balancer",
+    sub: "AWS ALB",
+    icon: <Cloud size={28} />,
+    color: "#7c3aed",
+  },
+  {
+    title: "FastAPI",
+    sub: "Async API",
+    icon: <Server size={28} />,
+    color: "#0ea5e9",
+  },
+  {
+    title: "Redis",
+    sub: "Job Queue",
+    icon: <Workflow size={28} />,
+    color: "#f59e0b",
+  },
+  {
+    title: "Worker",
+    sub: "ONNX Runtime",
+    icon: <Cpu size={28} />,
+    color: "#10b981",
+  },
+  {
+    title: "PostgreSQL",
+    sub: "Model Registry",
+    icon: <Database size={28} />,
+    color: "#ec4899",
+  },
+];
+
 export default function Architecture() {
-  const nodes = [
-    { icon: Globe, name: "React UI", color: "#2563eb" },
-    { icon: Server, name: "FastAPI", color: "#0ea5e9" },
-    { icon: Database, name: "Redis Queue", color: "#dc2626" },
-    { icon: Cpu, name: "Worker Pods", color: "#7c3aed" },
-    { icon: HardDrive, name: "RDS Registry", color: "#059669" },
-  ];
-
   return (
-    <section className="architecture-card">
-      <div className="section-title">
-        <h2>Production Architecture</h2>
-        <p>End-to-end inference pipeline running on Kubernetes</p>
-      </div>
-
-      <div className="pipeline">
-        {nodes.map((node, index) => {
-          const Icon = node.icon;
-
-          return (
-            <div className="pipeline-node" key={node.name}>
+    <div className="architecture-wrapper">
+      <div className="architecture">
+        {nodes.map((node, index) => (
+          <div className="pipeline-step" key={node.title}>
+            <div className="node">
               <div
-                className="icon-circle"
-                style={{ background: `${node.color}20`, color: node.color }}
+                className="node-icon"
+                style={{ background: `${node.color}22`, color: node.color }}
               >
-                <Icon size={28} />
+                {node.icon}
               </div>
 
-              <h4>{node.name}</h4>
+              <h4>{node.title}</h4>
 
-              {index !== nodes.length - 1 && (
-                <ArrowRight className="arrow" size={18} />
-              )}
+              <p>{node.sub}</p>
             </div>
-          );
-        })}
+
+            {index !== nodes.length - 1 && (
+              <div className="arrow">
+                <ArrowRight size={18} />
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      <div className="infra-grid">
-        <div>
-          <span>Container Orchestration</span>
-          <h3>Amazon EKS</h3>
+      <div className="architecture-info">
+        <div className="info-card">
+          <h3>Asynchronous Inference</h3>
+
+          <p>
+            Images are uploaded to FastAPI, queued in Redis, processed by ONNX
+            workers, and stored with metadata in PostgreSQL.
+          </p>
         </div>
 
-        <div>
-          <span>Object Storage</span>
-          <h3>Amazon S3</h3>
-        </div>
+        <div className="info-card">
+          <h3>Production Stack</h3>
 
-        <div>
-          <span>Database</span>
-          <h3>PostgreSQL RDS</h3>
-        </div>
-
-        <div>
-          <span>Queue Broker</span>
-          <h3>Redis</h3>
+          <ul>
+            <li>FastAPI + Uvicorn</li>
+            <li>Redis Queue</li>
+            <li>Kubernetes (EKS)</li>
+            <li>PostgreSQL (RDS)</li>
+            <li>ONNX Runtime</li>
+            <li>Prometheus Metrics</li>
+          </ul>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
